@@ -1,10 +1,15 @@
-<!-- Cadena Explosiva v1.2.1 — Háptica iOS (switch oculto) como mejora progresiva -->
+<!-- Cadena Explosiva v1.3 — Diccionario ES+EN, rondas aleatorias, doble-o-nada escalable, fix revancha/teclado, ícono -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
 <title>💣 Cadena Explosiva</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#26215C">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <style>
 /* ========== 1. ESTILOS ========== */
@@ -165,7 +170,18 @@ input[type=text]:focus { border-color: var(--accent2); }
 .usadas { font-size: .78rem; color: var(--muted); text-align: center; min-height: 18px; margin-top: 2px; padding: 0 10px; }
 
 .turno-mio { border: 2px solid var(--accent2); background: rgba(255,179,0,.08); border-radius: 16px; padding: 16px; margin-top: 8px; animation: reglaIn .3s ease; }
-.turno-mio .aviso { text-align: center; color: var(--accent2); font-weight: 800; margin-bottom: 10px; font-size: 1.05rem; }
+.turno-mio .aviso { text-align: center; color: var(--accent2); font-weight: 800; margin-bottom: 6px; font-size: 1.05rem; }
+.regla-mini { text-align: center; font-weight: 800; font-size: 1rem; color: var(--accent2); margin-bottom: 10px; background: rgba(0,0,0,.25); border-radius: 10px; padding: 8px 10px; }
+.regla-mini.esp { color: var(--especial); }
+
+/* modo compacto cuando el teclado está abierto: la regla queda siempre a la vista */
+#app.teclado .bomba-wrap { width: 64px; height: 64px; }
+#app.teclado .bomba-grande { font-size: 2.4rem; }
+#app.teclado .mecha { height: 16px; top: 0; }
+#app.teclado .usadas, #app.teclado .palabra-live { display: none; }
+#app.teclado .titulo, #app.teclado .quien-tiene { font-size: 1rem; }
+#app.teclado .regla-box { padding: 10px; }
+#app.teclado { padding-top: 8px; }
 .feedback-mal { color: var(--danger); text-align: center; font-size: .85rem; min-height: 18px; margin-top: 6px; }
 .feedback-mal.flash { animation: negar .4s; }
 @keyframes negar { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -316,6 +332,7 @@ input[type=text]:focus { border-color: var(--accent2); }
 
     <div id="turno-mio" class="turno-mio" style="display:none">
       <div class="aviso">🔥 ¡La tenés vos! Escribí una palabra</div>
+      <div class="regla-mini" id="regla-mini"></div>
       <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off">
       <button class="btn btn-primary" id="btn-pasar" onclick="UI.enviarPalabra()">PASAR LA BOMBA →</button>
       <p class="feedback-mal" id="feedback-mal"></p>
@@ -395,11 +412,11 @@ function mutadores() {
     { texto: "Algo que haya en la cocina", tipo: "libre" },
     { texto: "Un animal", tipo: "libre" },
     { texto: "Una comida", tipo: "libre" },
-    { texto: "Un país o ciudad", tipo: "libre" },
-    { texto: "Un nombre propio", tipo: "libre" },
+    { texto: "Un país o ciudad", tipo: "libre", sinDicc: true },
+    { texto: "Un nombre propio", tipo: "libre", sinDicc: true },
     { texto: "Algo de color rojo", tipo: "libre" },
     { texto: "Una parte del cuerpo", tipo: "libre" },
-    { texto: "Una marca conocida", tipo: "libre" },
+    { texto: "Una marca conocida", tipo: "libre", sinDicc: true },
     { texto: "Un objeto que tengas cerca ahora", tipo: "libre" },
     { texto: "Algo que se pueda tomar", tipo: "libre" },
     { texto: "Un deporte", tipo: "libre" },
@@ -407,7 +424,7 @@ function mutadores() {
     { texto: "Un instrumento musical", tipo: "libre" },
     { texto: "Algo que vuele", tipo: "libre" },
     { texto: "Una palabra que rime con \"amor\"", tipo: "libre" },
-    { texto: "Un personaje de peli o serie", tipo: "libre" },
+    { texto: "Un personaje de peli o serie", tipo: "libre", sinDicc: true },
     { texto: "Algo que encuentres en la playa", tipo: "libre" },
     { texto: "Una fruta o verdura", tipo: "libre" }
   ];
@@ -415,12 +432,39 @@ function mutadores() {
 
 const ESPECIALES = [
   { texto: "🔥 MECHA CORTA: la bomba explota MUCHO más rápido", tipo: "libre", flag: "mechaCorta" },
-  { texto: "⚡ DOBLE O NADA: si explota, perdés 2 vidas", tipo: "libre", flag: "dobleDanio" },
+  { texto: "⚡ DOBLE O NADA: cualquier palabra · si explota perdés 2 vidas", tipo: "dobleEscala", flag: "dobleDanio", nivel: 0 },
   { texto: "🎯 RONDA LARGA: solo valen palabras de 8+ letras", tipo: "largoMin", param: 8, flag: "" },
   { texto: "🔗 CADENA PURA: encadenás con la última letra, sin repetir", tipo: "encadena", flag: "" }
 ];
+const DOBLE_MIN = [2, 5, 6, 7, 8, 9];          /* mínimo de letras por nivel */
+const DOBLE_CONT = "aeors".split("");           /* letras "contiene" fáciles */
+const DOBLE_INI = "acdemprst".split("");        /* letras "empieza" fáciles */
 
-const LOCAL = { soyHost: false, miId: null, nombre: "", emoji: CFG.EMOJIS[0], codigo: null };
+const LOCAL = { soyHost: false, miId: null, nombre: "", emoji: CFG.EMOJIS[0], codigo: null, enSala: false };
+
+/* ========== 3b. DICCIONARIO ES + EN (valida el host) ========== */
+const DICC = {
+  str: null, listo: false, cargando: false,
+  normalizar(s) {
+    return String(s || "").toLowerCase().trim()
+      .normalize("NFD")
+      .replace(/n\u0303/g, "\u00f1")        /* conservar la ñ */
+      .replace(/[\u0300-\u036f]/g, "")      /* tildes y diéresis fuera: "árbol" == "arbol" */
+      .normalize("NFC");
+  },
+  cargar() {
+    if (this.listo || this.cargando) return;
+    this.cargando = true;
+    fetch("dicc.txt")
+      .then(r => { if (!r.ok) throw new Error("http " + r.status); return r.text(); })
+      .then(t => { this.str = "\n" + t.trim() + "\n"; this.listo = true; this.cargando = false; })
+      .catch(() => { this.cargando = false; setTimeout(() => this.cargar(), 4000); });
+  },
+  existe(palabraNormalizada) {
+    if (!this.listo) return true;  /* si el diccionario no cargó, no bloquea el juego */
+    return this.str.includes("\n" + palabraNormalizada + "\n");
+  }
+};
 
 /* ========== 4. RED (PeerJS: host, invitado, mensajes, heartbeat) ========== */
 const NET = {
@@ -465,8 +509,12 @@ const NET = {
     this.conns = this.conns.filter(c => c !== conn);
     if (GAME.state.fase === "jugando" && GAME.state.bombaEn === conn.peer && !GAME.enPausa) {
       GAME.limpiarTimer();
-      const sig = GAME.siguienteVivo(conn.peer);
-      if (sig) { GAME.state.reglaActual = GAME.nuevaRegla(); GAME.pasarBombaA(sig); }
+      const rondaAntes = GAME.state.ronda;
+      const sig = GAME.proximoTurno(conn.peer);
+      if (sig) {
+        if (GAME.state.ronda === rondaAntes && !GAME.state.esEspecial) GAME.state.reglaActual = GAME.nuevaRegla();
+        GAME.pasarBombaA(sig);
+      }
       else GAME.chequearFin();
     }
     this.broadcastState(); UI.render();
@@ -583,10 +631,10 @@ const NET = {
       const bombaAntes = GAME.state.bombaEn;
       GAME.state = msg.full;
       UI.render();
-      if (GAME.state.fase === "jugando" && faseAnterior !== "jugando") UI.irJuego();
-      if (GAME.state.fase === "podio" && faseAnterior !== "podio") UI.irPodio();
-      if (GAME.state.fase === "lobby" && faseAnterior !== "lobby") UI.irLobby();
+      // sincronización idempotente de pantalla: siempre mostrar la que corresponde a la fase
+      UI.sincronizarPantalla(faseAnterior);
       if (GAME.state.fase === "jugando" && GAME.state.bombaEn === LOCAL.miId && bombaAntes !== LOCAL.miId) {
+        UI.turnoFresco();  // casillero vacío al arrancar mi turno
         AUDIO.tick(); UI.vibrar([60]);
       }
     }
@@ -619,10 +667,41 @@ const GAME = {
   bombaTimer: null,
   ultimoNonce: {},
   enPausa: false,   // FIX QA: true durante la pausa post-explosión (nadie tiene la bomba)
+  /* --- orden de turnos por ronda (solo host): cada ronda arranca en un jugador al azar --- */
+  orden: [], ordenIdx: 0,
   /* --- modo mecha compartida (solo host) --- */
   mechaTotal: 0, mechaRestante: 0, turnoRestante: 0, mechaInterval: null,
 
   vivos() { return this.state.jugadores.filter(j => j.vidas > 0 && j.conectado); },
+
+  /* Nueva ronda: arranca en un jugador al azar (nunca el que acaba de jugar/explotar) y recorre a todos */
+  nuevaRonda(excluirId) {
+    const ids = this.vivos().map(j => j.id);
+    if (!ids.length) { this.orden = []; this.ordenIdx = 0; return; }
+    let start = Math.floor(Math.random() * ids.length);
+    if (ids.length > 1 && ids[start] === excluirId) {
+      start = (start + 1 + Math.floor(Math.random() * (ids.length - 1))) % ids.length;
+    }
+    this.orden = ids.slice(start).concat(ids.slice(0, start));
+    this.ordenIdx = 0;
+  },
+  /* Avanza al próximo del orden; si la ronda terminó, arma una nueva con arranque aleatorio y regla nueva */
+  proximoTurno(actualId) {
+    for (let guard = 0; guard < 99; guard++) {
+      this.ordenIdx++;
+      if (this.ordenIdx >= this.orden.length) {
+        if (!this.vivos().length) return null;
+        this.state.ronda++;
+        this.nuevaRonda(actualId);
+        this.state.reglaActual = this.nuevaRegla();
+        if (!this.orden.length) return null;
+      }
+      const id = this.orden[this.ordenIdx];
+      const j = this.state.jugadores.find(x => x.id === id);
+      if (j && j.vidas > 0 && j.conectado) return id;
+    }
+    return null;
+  },
   siguienteVivo(desdeId) {
     const js = this.state.jugadores;
     const idx = js.findIndex(j => j.id === desdeId);
@@ -642,20 +721,40 @@ const GAME = {
     let regla;
     if (especial) { regla = { ...ESPECIALES[Math.floor(Math.random() * ESPECIALES.length)] }; this.state.esEspecial = true; }
     else { const pool = mutadores(); regla = pool[Math.floor(Math.random() * pool.length)]; this.state.esEspecial = false; }
+    if (regla.tipo === "dobleEscala") { regla.nivel = 0; regla.letraCont = null; regla.letraIni = null; regla.texto = this.textoDoble(regla); }
     this.state.usadas = []; this.state.ultimaPalabra = "";
     return regla;
+  },
+  textoDoble(r) {
+    const n = Math.min(r.nivel || 0, DOBLE_MIN.length - 1);
+    const min = DOBLE_MIN[n];
+    const req = [];
+    if (min > 2) req.push(min + "+ letras");
+    if (r.letraCont) req.push('con la "' + r.letraCont.toUpperCase() + '"');
+    if (r.letraIni) req.push('que empiece con "' + r.letraIni.toUpperCase() + '"');
+    const nivel = (r.nivel || 0) > 0 ? " · NIVEL " + ((r.nivel || 0) + 1) : "";
+    return "⚡ DOBLE O NADA" + nivel + ": " + (req.length ? "palabra de " + req.join(", ") : "cualquier palabra") + " · si explota perdés 2 vidas";
+  },
+  escalarDoble(r) {
+    r.nivel = (r.nivel || 0) + 1;
+    if (r.nivel >= 3 && !r.letraCont) r.letraCont = DOBLE_CONT[Math.floor(Math.random() * DOBLE_CONT.length)];
+    if (r.nivel >= 4 && !r.letraIni) r.letraIni = DOBLE_INI[Math.floor(Math.random() * DOBLE_INI.length)];
+    r.texto = this.textoDoble(r);
   },
   empezar() {
     if (!LOCAL.soyHost) return;
     const activos = this.state.jugadores.filter(j => j.conectado);
-    if (activos.length < CFG.MIN_JUG) return;
+    if (activos.length < CFG.MIN_JUG) { UI.banner("Faltan jugadores conectados para arrancar.", null, true); setTimeout(() => UI.ocultarBanner(), 2500); return; }
+    DICC.cargar();
+    this.limpiarTimer(); this.enPausa = false; this.ultimoNonce = {};
     this.state.jugadores.forEach(j => j.vidas = CFG.VIDAS_INI);
     this.state.fase = "jugando"; this.state.ronda = 1; this.state.stats = {};
     this.state.turnoSeg = null; this.state.mechaFrac = null;
-    this.ultimoNonce = {}; this.enPausa = false;
+    this.state.palabraActual = ""; this.state.usadas = []; this.state.ultimaPalabra = "";
     this.state.reglaActual = this.nuevaRegla();
+    this.nuevaRonda(null);
     if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
-    this.pasarBombaA(this.vivos()[0].id);
+    this.pasarBombaA(this.orden[0]);
     NET.broadcastState(); UI.irJuego();
   },
   pasarBombaA(id) {
@@ -665,7 +764,7 @@ const GAME = {
     if (this.state.modo === "mecha") { this.limpiarTimer(); this.nuevoTurno(); if (!this.mechaInterval) this.arrancarTick(); }
     else this.armarTimer();
     NET.broadcastState(); UI.render();
-    if (id === LOCAL.miId) { AUDIO.tick(); UI.vibrar([60]); }
+    if (id === LOCAL.miId) { UI.turnoFresco(); AUDIO.tick(); UI.vibrar([60]); }
   },
   /* ===== MODO MECHA COMPARTIDA ===== */
   rango(par) { return par[0] + Math.random() * (par[1] - par[0]); },
@@ -738,12 +837,28 @@ const GAME = {
   },
 
   validar(texto, regla) {
-    const t = (texto || "").trim().toLowerCase();
-    if (t.length < 2) return { ok: false, motivo: "Muy corta." };
-    if (t.length > 40) return { ok: false, motivo: "Demasiado larga." };
+    const crudo = (texto || "").trim().toLowerCase();
+    if (crudo.length < 2) return { ok: false, motivo: "Muy corta." };
+    if (crudo.length > 40) return { ok: false, motivo: "Demasiado larga." };
+    const t = DICC.normalizar(crudo);
+    const sinDicc = !!(regla && regla.sinDicc);
+    if (sinDicc) {
+      if (!/^[a-zñ ]+$/.test(t)) return { ok: false, motivo: "Solo letras." };
+    } else {
+      if (!/^[a-zñ]+$/.test(t)) return { ok: false, motivo: "Una sola palabra, solo letras." };
+      if (!DICC.existe(t)) return { ok: false, motivo: "Esa palabra no existe. Fijate cómo se escribe." };
+    }
     if (this.state.usadas.includes(t)) return { ok: false, motivo: "Esa ya la dijeron." };
-    if (!regla) return { ok: true };
+    if (!regla) return { ok: true, palabra: t };
     switch (regla.tipo) {
+      case "dobleEscala": {
+        const n = Math.min(regla.nivel || 0, DOBLE_MIN.length - 1);
+        const min = DOBLE_MIN[n];
+        if (t.length < min) return { ok: false, motivo: `Mínimo ${min} letras.` };
+        if (regla.letraCont && !t.includes(regla.letraCont)) return { ok: false, motivo: `Tiene que contener la "${regla.letraCont.toUpperCase()}".` };
+        if (regla.letraIni && t[0] !== regla.letraIni) return { ok: false, motivo: `Tiene que empezar con "${regla.letraIni.toUpperCase()}".` };
+        return { ok: true, palabra: t };
+      }
       case "empieza":     return t[0] === regla.param.toLowerCase() ? { ok: true } : { ok: false, motivo: `Tiene que empezar con "${regla.param}".` };
       case "termina":     return t[t.length - 1] === regla.param.toLowerCase() ? { ok: true } : { ok: false, motivo: `Tiene que terminar con "${regla.param}".` };
       case "prohibida":   return !t.includes(regla.param.toLowerCase()) ? { ok: true } : { ok: false, motivo: `Tiene la letra prohibida "${regla.param}".` };
@@ -781,7 +896,7 @@ const GAME = {
       NET.broadcastState(); UI.render();
       return;
     }
-    const limpia = texto.trim().toLowerCase();
+    const limpia = DICC.normalizar(texto);
     this.state.usadas.push(limpia);
     this.state.ultimaPalabra = limpia;
     const s = this.statDe(deId);
@@ -792,9 +907,13 @@ const GAME = {
     }
     NET.broadcastEvent("paso", { id: deId });
     if (deId === LOCAL.miId) AUDIO.pop();
-    const sig = this.siguienteVivo(deId);
-    if (!this.state.esEspecial) this.state.reglaActual = this.nuevaRegla();
-    this.state.ronda++;
+    const rondaAntes = this.state.ronda;
+    const sig = this.proximoTurno(deId);
+    if (this.state.ronda === rondaAntes) {
+      // seguimos dentro de la misma ronda
+      if (!this.state.esEspecial) this.state.reglaActual = this.nuevaRegla();
+      else if (this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
+    }
     this.pasarBombaA(sig);
   },
 
@@ -816,11 +935,13 @@ const GAME = {
     NET.broadcastState(); UI.render();
     setTimeout(() => {
       this.enPausa = false;
+      if (this.state.fase !== "jugando") return;
       if (this.chequearFin()) return;
-      const sig = this.siguienteVivo(perdedorId) || (j.vidas > 0 ? perdedorId : (this.vivos()[0] && this.vivos()[0].id));
+      this.state.ronda++;
+      this.nuevaRonda(perdedorId);
       this.state.reglaActual = this.nuevaRegla();
       if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
-      this.pasarBombaA(sig);
+      this.pasarBombaA(this.orden[0] || null);
     }, CFG.PAUSA_EXPLOSION_MS);
   },
 
@@ -837,8 +958,10 @@ const GAME = {
 
   revancha() {
     if (!LOCAL.soyHost) return;
-    this.state.fase = "lobby"; this.state.bombaEn = null;
-    NET.broadcastState();
+    this.limpiarTimer();
+    this.enPausa = false;
+    this.ultimoNonce = {};
+    this.state.bombaEn = null;
     this.empezar();
   }
 };
@@ -852,6 +975,25 @@ const UI = {
   irLobby() { this.mostrar("p-lobby"); this.render(); },
   irJuego() { this.mostrar("p-juego"); this.render(); },
   irPodio() { this.mostrar("p-podio"); this.render(); this.lluviaConfeti(); },
+
+  /* Muestra siempre la pantalla que corresponde a la fase actual (a prueba de mensajes perdidos / revancha) */
+  sincronizarPantalla(faseAnterior) {
+    const st = GAME.state;
+    const activa = id => document.getElementById(id).classList.contains("activa");
+    if (st.fase === "jugando" && !activa("p-juego")) this.irJuego();
+    else if (st.fase === "podio" && !activa("p-podio")) { if (faseAnterior !== "podio") this.irPodio(); else { this.mostrar("p-podio"); this.render(); } }
+    else if (st.fase === "lobby" && !activa("p-lobby") && LOCAL.enSala) this.irLobby();
+  },
+
+  /* Arranca mi turno: casillero vacío, botón habilitado, listo para escribir al toque */
+  turnoFresco() {
+    this.ultimaEnviada = "";
+    const inp = document.getElementById("in-palabra");
+    if (inp) { inp.value = ""; try { inp.focus({ preventScroll: false }); } catch (e) {} }
+    const btnP = document.getElementById("btn-pasar");
+    if (btnP) btnP.disabled = false;
+    if (LOCAL.soyHost) { GAME.state.palabraActual = ""; }
+  },
 
   initEmojis() {
     const cont = document.getElementById("emoji-picker");
@@ -877,7 +1019,9 @@ const UI = {
     const n = this.leerNombre();
     if (!n) { this.errorInicio("Escribí tu nombre primero."); return; }
     AUDIO.desbloquear();
-    LOCAL.nombre = n; this.errorInicio(""); NET.crearSala();
+    LOCAL.nombre = n; LOCAL.enSala = true; this.errorInicio("");
+    DICC.cargar();
+    NET.crearSala();
   },
   mostrarUnirse() {
     document.getElementById("menu-inicial").style.display = "none";
@@ -895,7 +1039,7 @@ const UI = {
     const cod = document.getElementById("in-codigo").value.trim().toUpperCase();
     if (cod.length !== 4) { this.errorInicio("El código son 4 letras."); return; }
     AUDIO.desbloquear();
-    LOCAL.nombre = n; this.errorInicio("");
+    LOCAL.nombre = n; LOCAL.enSala = true; this.errorInicio("");
     document.getElementById("in-codigo").value = cod;
     NET.unirse(cod); this.irLobby();
     document.getElementById("estado-conn").innerHTML = '<span class="spinner"></span> Conectando…';
@@ -1013,6 +1157,11 @@ const UI = {
 
       const tm = document.getElementById("turno-mio");
       tm.style.display = laTengoYo ? "block" : "none";
+      const rm = document.getElementById("regla-mini");
+      if (rm) {
+        rm.textContent = st.reglaActual ? st.reglaActual.texto : "";
+        rm.classList.toggle("esp", !!st.esEspecial);
+      }
       const btnP = document.getElementById("btn-pasar");
       if (btnP && !laTengoYo) btnP.disabled = false;
 
@@ -1182,8 +1331,9 @@ const UI = {
   reset() {
     NET.pararHeartbeat();
     NET.peer = null; NET.conns = []; NET.hostConn = null; NET.ultimoDelHost = 0;
-    LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null;
+    LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null; LOCAL.enSala = false;
     GAME.limpiarTimer(); GAME.ultimoNonce = {}; GAME.enPausa = false;
+    GAME.orden = []; GAME.ordenIdx = 0;
     GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null };
     const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
     document.getElementById("app").classList.remove("hot-bg");
@@ -1251,6 +1401,19 @@ document.getElementById("in-palabra").addEventListener("input", (e) => {
 document.getElementById("in-palabra").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); UI.enviarPalabra(); }
 });
+/* Teclado abierto → modo compacto: la regla queda siempre visible arriba del casillero */
+const inPalabra = document.getElementById("in-palabra");
+inPalabra.addEventListener("focus", () => {
+  document.getElementById("app").classList.add("teclado");
+  setTimeout(() => { try { window.scrollTo(0, 0); document.getElementById("regla-box").scrollIntoView({ block: "start" }); } catch (e) {} }, 250);
+});
+inPalabra.addEventListener("blur", () => document.getElementById("app").classList.remove("teclado"));
+if (window.visualViewport) {
+  window.visualViewport.addEventListener("resize", () => {
+    const abierto = window.visualViewport.height < window.innerHeight * 0.78;
+    document.getElementById("app").classList.toggle("teclado", abierto && document.activeElement === inPalabra);
+  });
+}
 document.body.addEventListener("touchstart", () => AUDIO.desbloquear(), { once: true });
 document.body.addEventListener("click", () => AUDIO.desbloquear(), { once: true });
 window.addEventListener("beforeunload", () => { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} });

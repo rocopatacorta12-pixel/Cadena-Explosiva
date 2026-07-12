@@ -25,3 +25,13 @@ También podés relanzar la compilación a mano: Actions → Build APK → Run w
 - `.github/workflows/build-apk.yml` — compilación automática del APK
 
 ⚠️ Si editás el juego, actualizá **los dos** index.html (raíz y `www/`).
+
+
+## v1.3
+- **Diccionario real ES + EN** (~900.000 palabras): solo valen palabras que existen, con o sin tilde ("árbol" = "arbol"). Reglas de nombres propios/marcas/lugares no usan diccionario.
+- **Rondas aleatorias**: cada ronda arranca en un jugador al azar (nunca el mismo dos veces seguidas) y recorre a todos; el contador de ronda ahora cuenta ciclos completos.
+- **Doble o nada escalable**: cada pase sube el nivel (más letras mínimas, letra obligatoria, letra inicial).
+- **Teclado**: al escribir, la pantalla pasa a modo compacto y la regla se ve siempre (también aparece arriba del casillero).
+- **Fix revancha**: reinicio limpio y sincronización de pantalla a prueba de fallos; el que tiene la bomba siempre ve la barra para escribir.
+- **Casillero siempre vacío** al arrancar cada turno.
+- **Ícono de app** (clásico morado) para APK y para instalar desde el navegador (manifest + apple-touch-icon). El workflow genera los íconos Android automáticamente.
