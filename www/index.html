@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v1.4 — Teclado propio, consignas coherentes con categorías, anuncio de especiales, memoria de consignas, palabras bloqueadas por partida, 12 jugadores -->
+<!-- Cadena Explosiva v1.5 — Teclado más grande y adaptado a Android/iPhone, vibración vía Haptics de Capacitor (con permiso VIBRATE), 34 animalitos con look más real, QA de 1666 partidas -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -72,11 +72,21 @@ input[type=text]:focus { border-color: var(--accent2); }
 .btn:disabled { filter: grayscale(.6) brightness(.6); cursor: default; }
 .btn-ghost { background: transparent; color: var(--muted); min-height: 44px; font-size: .95rem; margin-top: 8px; }
 
-.emoji-picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 14px 0; }
+.emoji-picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 14px 0; max-height: 42vh; overflow-y: auto; padding: 4px; }
 .emoji-op {
-  width: 48px; height: 48px; font-size: 1.6rem; border-radius: 12px; background: var(--card);
+  width: 52px; height: 52px; font-size: 1.75rem; border-radius: 14px;
+  background: radial-gradient(circle at 32% 26%, #2f2a56, var(--card) 70%);
   border: 2px solid transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;
   transition: transform .12s, border-color .2s;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 3px 6px rgba(0,0,0,.35);
+}
+/* animalitos con look más real: sombra proyectada, brillo cenital y más saturación/contraste */
+.av-real {
+  display: inline-block;
+  filter: saturate(1.35) contrast(1.12) brightness(1.05)
+          drop-shadow(0 3px 3px rgba(0,0,0,.55))
+          drop-shadow(0 -1px 1px rgba(255,255,255,.18));
+  text-shadow: 0 1px 2px rgba(0,0,0,.4);
 }
 .emoji-op:active { transform: scale(.9); }
 .emoji-op.sel { border-color: var(--accent2); background: #2c2750; transform: scale(1.08); }
@@ -184,17 +194,31 @@ input[type=text]:focus { border-color: var(--accent2); }
 #app.teclado .usadas { font-size: .72rem; }
 #app.teclado { padding-top: 8px; }
 
-/* teclado propio del juego: sin autocorrector ni sugerencias, igual en todos los celus */
+/* teclado propio del juego: sin autocorrector ni sugerencias.
+   Un poco más grande que antes y con estilo adaptado al celu:
+   body.kb-android → look tipo Gboard | body.kb-ios → look tipo teclado de iPhone */
 .teclado-propio { margin-top: 10px; user-select: none; -webkit-user-select: none; }
-.fila-teclas { display: flex; gap: 4px; justify-content: center; margin-bottom: 5px; }
+.fila-teclas { display: flex; gap: 5px; justify-content: center; margin-bottom: 7px; }
 .tecla {
-  flex: 1; min-width: 0; max-width: 9.6%; height: 46px;
+  flex: 1; min-width: 0; max-width: 9.8%; height: clamp(50px, 7.2vh, 60px);
   background: #332c5e; border: none; border-radius: 8px;
-  color: var(--txt); font-size: 1.05rem; font-weight: 800;
+  color: var(--txt); font-size: 1.25rem; font-weight: 700;
   touch-action: manipulation; padding: 0; cursor: pointer;
 }
 .tecla:active { background: var(--accent2); color: #1a1408; transform: scale(1.08); }
-.tecla.ancha { max-width: 15%; flex: 1.7; font-size: 1.2rem; }
+.tecla.ancha { max-width: 15.5%; flex: 1.7; font-size: 1.35rem; }
+
+/* Look Android (tipo Gboard oscuro) */
+body.kb-android .teclado-propio { background: #1b1b1f; padding: 8px 4px 10px; border-radius: 14px 14px 0 0; margin-left: -16px; margin-right: -16px; }
+body.kb-android .tecla { background: #3c4043; border-radius: 6px; font-weight: 500; box-shadow: 0 1px 0 rgba(0,0,0,.45); }
+body.kb-android .tecla.ancha { background: #5f6368; }
+body.kb-android .tecla:active { background: var(--accent2); color: #1a1408; }
+
+/* Look iPhone (tipo teclado iOS oscuro) */
+body.kb-ios .teclado-propio { background: rgba(30,30,32,.92); padding: 9px 3px 11px; border-radius: 12px 12px 0 0; margin-left: -16px; margin-right: -16px; -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); }
+body.kb-ios .tecla { background: #6b6b6e; border-radius: 5.5px; font-weight: 400; box-shadow: 0 1px 0 rgba(0,0,0,.55); }
+body.kb-ios .tecla.ancha { background: #48484b; }
+body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 
 /* anuncio a pantalla completa de ronda especial */
 .anuncio-full {
@@ -413,7 +437,7 @@ const CFG = {
   MIN_JUG: 2,
   MAX_JUG: 12,
   VIDAS_INI: 3,
-  EMOJIS: ["🦊","🐸","🐙","🦄","🐲","🦖","🐧","🐨","🦁","🐵","🦉","🐢"],
+  EMOJIS: ["🦊","🐸","🐙","🦄","🐲","🦖","🐧","🐨","🦁","🐵","🦉","🐢","🐶","🐱","🐭","🐹","🐰","🐻","🐼","🐯","🐮","🐷","🐔","🦆","🦅","🐺","🐴","🦓","🦒","🐘","🦔","🐬","🐳","🦋"],
   BOMBA_MIN_MS: 7000,
   BOMBA_MAX_MS: 20000,
   PROB_ESPECIAL: 0.18,
@@ -1167,7 +1191,7 @@ const UI = {
     CFG.EMOJIS.forEach(e => {
       const el = document.createElement("div");
       el.className = "emoji-op" + (e === LOCAL.emoji ? " sel" : "");
-      el.textContent = e;
+      el.innerHTML = `<span class="av-real">${e}</span>`;
       el.onclick = () => { LOCAL.emoji = e; this.initEmojis(); };
       cont.appendChild(el);
     });
@@ -1249,7 +1273,7 @@ const UI = {
         li.className = "jug";
         const soyYo = j.id === LOCAL.miId;
         li.innerHTML = `
-          <span class="av">${j.emoji}</span>
+          <span class="av av-real">${j.emoji}</span>
           <span class="nom">${this.escape(j.nombre)}${soyYo ? " (vos)" : ""}</span>
           ${i === 0 ? '<span class="tag host">HOST</span>' : ''}
           <span class="dot ${j.conectado ? '' : 'off'}"></span>`;
@@ -1340,7 +1364,7 @@ const UI = {
         const chip = document.createElement("div");
         chip.className = "vida-chip" + (j.id === st.bombaEn ? " hot" : "") + (j.vidas <= 0 ? " muerto" : "") + (!j.conectado ? " off-conn" : "");
         const conn = j.conectado ? "" : " 📴";
-        chip.innerHTML = `<span>${j.emoji}</span> <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
+        chip.innerHTML = `<span class="av-real">${j.emoji}</span> <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
         vf.appendChild(chip);
       });
     } else {
@@ -1370,7 +1394,7 @@ const UI = {
         li.style.animationDelay = (i * 0.08) + "s";
         li.innerHTML = `
           <span class="pos">${medallas[i] || (i + 1)}</span>
-          <span class="av">${j.emoji}</span>
+          <span class="av av-real">${j.emoji}</span>
           <span class="nom">${this.escape(j.nombre)}</span>
           <span class="det">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>`;
         lista.appendChild(li);
@@ -1431,7 +1455,7 @@ const UI = {
     if (!inp) return;
     if (ch === "⌫") inp.value = inp.value.slice(0, -1);
     else if (inp.value.length < 40) inp.value += ch;
-    try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+    this.vibrar(10);
     this.notificarTipeo();
   },
   notificarTipeo() {
@@ -1527,8 +1551,22 @@ const UI = {
 
   vibrar(patron) {
     try {
+      /* 1) Dentro del APK/app: plugin Haptics de Capacitor (anda en Android y iPhone).
+            Es lo que faltaba: en el WebView navigator.vibrate no funciona sin este plugin + permiso VIBRATE. */
+      const H = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Haptics;
+      if (H) {
+        const arr = Array.isArray(patron) ? patron : [patron || 40];
+        const fuerte = Math.max.apply(null, arr) >= 100;
+        let t = 0;
+        for (let i = 0; i < arr.length; i += 2) {
+          setTimeout(() => { try { H.impact({ style: fuerte ? "HEAVY" : "MEDIUM" }); } catch (e) {} }, t);
+          t += (arr[i] || 60) + (arr[i + 1] || 60);
+        }
+        return;
+      }
+      /* 2) Navegador Android: API estándar */
       if (navigator.vibrate) { navigator.vibrate(patron); return; }
-      // Fallback iOS: taps del Taptic Engine vía label del switch oculto (no hace nada si el SO lo parcheó)
+      /* 3) Fallback Safari iOS: taps del Taptic Engine vía label del switch oculto */
       const lbl = document.getElementById("haptic-lbl");
       if (!lbl) return;
       const taps = Math.min(3, Array.isArray(patron) ? Math.ceil(patron.length / 2) : 1);
@@ -1604,6 +1642,12 @@ const AUDIO = {
 };
 
 /* ========== 8. ARRANQUE ========== */
+/* Detectar plataforma para que el teclado propio se parezca al del celu */
+(function () {
+  const ua = navigator.userAgent || "";
+  const esIOS = /iPhone|iPad|iPod/i.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  document.body.classList.add(esIOS ? "kb-ios" : (/Android/i.test(ua) ? "kb-android" : "kb-android"));
+})();
 UI.initEmojis();
 document.getElementById("in-codigo").addEventListener("input", (e) => {
   e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
