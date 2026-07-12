@@ -32,6 +32,11 @@ jobs:
       - name: Sincronizar web → Android
         run: npx cap sync android
 
+      - name: Agregar permiso de vibración (necesario para que vibre el celu)
+        run: |
+          M=android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.VIBRATE' $M || sed -i 's|<application|<uses-permission android:name="android.permission.VIBRATE" />\n    <application|' $M
+
       - name: Compilar APK (debug)
         run: cd android && chmod +x gradlew && ./gradlew assembleDebug
 
