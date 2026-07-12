@@ -35,3 +35,13 @@ También podés relanzar la compilación a mano: Actions → Build APK → Run w
 - **Fix revancha**: reinicio limpio y sincronización de pantalla a prueba de fallos; el que tiene la bomba siempre ve la barra para escribir.
 - **Casillero siempre vacío** al arrancar cada turno.
 - **Ícono de app** (clásico morado) para APK y para instalar desde el navegador (manifest + apple-touch-icon). El workflow genera los íconos Android automáticamente.
+
+
+## v1.4
+- **Teclado propio dentro del juego**: sin autocorrector ni sugerencias del celu (igual para todos), la pantalla no se mueve nunca y la consigna queda siempre a la vista. En PC se puede seguir tipeando con el teclado físico.
+- **Consignas coherentes**: cada categoría (frutas, animales, instrumentos, países, oficios, etc.) valida contra su propia lista de palabras; las rimas se validan por terminación real + diccionario. Se eliminaron las consignas invalidables (marcas, nombres propios, personajes).
+- **Pool de ~880 consignas** con rotación persistente: el celu del anfitrión recuerda cuáles ya salieron (aunque se cierre la app) y no repite hasta agotar el pool (~100+ partidas).
+- **Rondas especiales con anuncio**: aparecen a pantalla completa para todos con cuenta regresiva de 4 segundos, y recién ahí la bomba sale a un jugador al azar. Nadie arranca en desventaja.
+- **Palabras bloqueadas toda la partida**: lo que se dijo en cualquier ronda no se puede repetir hasta que alguien gane, aunque la consigna sea otra. Se muestran arriba con el total.
+- **Hasta 12 jugadores** por sala.
+- **Aviso de anfitrión**: la app explica que conviene que cree la sala el celu más potente y con mejor internet.

@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v1.3 — Diccionario ES+EN, rondas aleatorias, doble-o-nada escalable, fix revancha/teclado, ícono -->
+<!-- Cadena Explosiva v1.4 — Teclado propio, consignas coherentes con categorías, anuncio de especiales, memoria de consignas, palabras bloqueadas por partida, 12 jugadores -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -174,14 +174,42 @@ input[type=text]:focus { border-color: var(--accent2); }
 .regla-mini { text-align: center; font-weight: 800; font-size: 1rem; color: var(--accent2); margin-bottom: 10px; background: rgba(0,0,0,.25); border-radius: 10px; padding: 8px 10px; }
 .regla-mini.esp { color: var(--especial); }
 
-/* modo compacto cuando el teclado está abierto: la regla queda siempre a la vista */
-#app.teclado .bomba-wrap { width: 64px; height: 64px; }
-#app.teclado .bomba-grande { font-size: 2.4rem; }
-#app.teclado .mecha { height: 16px; top: 0; }
-#app.teclado .usadas, #app.teclado .palabra-live { display: none; }
-#app.teclado .titulo, #app.teclado .quien-tiene { font-size: 1rem; }
-#app.teclado .regla-box { padding: 10px; }
+/* modo compacto cuando es tu turno (el teclado propio ocupa lugar): la regla queda siempre a la vista */
+#app.teclado .bomba-wrap { width: 56px; height: 56px; }
+#app.teclado .bomba-grande { font-size: 2.2rem; }
+#app.teclado .mecha { height: 14px; top: 0; }
+#app.teclado .palabra-live { display: none; }
+#app.teclado .quien-tiene { display: none; }
+#app.teclado .regla-box { padding: 8px 10px; }
+#app.teclado .usadas { font-size: .72rem; }
 #app.teclado { padding-top: 8px; }
+
+/* teclado propio del juego: sin autocorrector ni sugerencias, igual en todos los celus */
+.teclado-propio { margin-top: 10px; user-select: none; -webkit-user-select: none; }
+.fila-teclas { display: flex; gap: 4px; justify-content: center; margin-bottom: 5px; }
+.tecla {
+  flex: 1; min-width: 0; max-width: 9.6%; height: 46px;
+  background: #332c5e; border: none; border-radius: 8px;
+  color: var(--txt); font-size: 1.05rem; font-weight: 800;
+  touch-action: manipulation; padding: 0; cursor: pointer;
+}
+.tecla:active { background: var(--accent2); color: #1a1408; transform: scale(1.08); }
+.tecla.ancha { max-width: 15%; flex: 1.7; font-size: 1.2rem; }
+
+/* anuncio a pantalla completa de ronda especial */
+.anuncio-full {
+  position: fixed; inset: 0; z-index: 55; display: none;
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px; text-align: center;
+  background: radial-gradient(circle at 50% 40%, rgba(176,107,255,.38), rgba(13,11,26,.97) 70%);
+}
+.anuncio-full.on { display: flex; animation: reglaIn .3s ease; }
+.anuncio-badge { background: var(--especial); color: #fff; font-weight: 900; letter-spacing: 2px; padding: 6px 16px; border-radius: 20px; font-size: .8rem; }
+.anuncio-txt { font-size: 1.45rem; font-weight: 900; color: #fff; max-width: 480px; line-height: 1.3; }
+.anuncio-count { font-size: 4.5rem; font-weight: 900; color: var(--especial); line-height: 1; }
+.anuncio-sub { color: var(--muted); font-size: .9rem; }
+
+.hint-host { color: var(--muted); font-size: .78rem; text-align: center; margin-top: 14px; line-height: 1.45; }
 .feedback-mal { color: var(--danger); text-align: center; font-size: .85rem; min-height: 18px; margin-top: 6px; }
 .feedback-mal.flash { animation: negar .4s; }
 @keyframes negar { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
@@ -262,6 +290,7 @@ input[type=text]:focus { border-color: var(--accent2); }
     <div id="menu-inicial">
       <button class="btn btn-primary" onclick="UI.crearSala()">🔥 CREAR SALA</button>
       <button class="btn btn-secondary" onclick="UI.mostrarUnirse()">🔗 UNIRSE A UNA SALA</button>
+      <p class="hint-host">💡 El celu que CREA la sala es el anfitrión y dirige la partida para todos. Si van a jugar muchos, conviene que la cree el celu más potente y con mejor internet.</p>
     </div>
 
     <div id="menu-unirse" style="display:none">
@@ -299,6 +328,7 @@ input[type=text]:focus { border-color: var(--accent2); }
     <div class="card">
       <ul class="jugadores" id="lista-jugadores"></ul>
       <p class="contador" id="contador-jug"></p>
+      <p class="hint-host" style="margin-top:6px">💡 El anfitrión dirige la partida: mejor que sea el celu más potente y con buena señal.</p>
     </div>
 
     <div id="estado-conn" class="estado-conn"></div>
@@ -333,7 +363,8 @@ input[type=text]:focus { border-color: var(--accent2); }
     <div id="turno-mio" class="turno-mio" style="display:none">
       <div class="aviso">🔥 ¡La tenés vos! Escribí una palabra</div>
       <div class="regla-mini" id="regla-mini"></div>
-      <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off">
+      <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="none">
+      <div class="teclado-propio" id="teclado-propio"></div>
       <button class="btn btn-primary" id="btn-pasar" onclick="UI.enviarPalabra()">PASAR LA BOMBA →</button>
       <p class="feedback-mal" id="feedback-mal"></p>
     </div>
@@ -359,6 +390,13 @@ input[type=text]:focus { border-color: var(--accent2); }
   <div class="txt" id="explosion-txt"></div>
 </div>
 
+<div id="anuncio" class="anuncio-full">
+  <div class="anuncio-badge">✦ RONDA ESPECIAL ✦</div>
+  <div class="anuncio-txt" id="anuncio-txt"></div>
+  <div class="anuncio-count" id="anuncio-count"></div>
+  <div class="anuncio-sub">Léanla todos… la bomba sale a un jugador al azar</div>
+</div>
+
 <div id="banner" class="banner"><span id="banner-txt"></span><span id="banner-accion"></span></div>
 
 <!-- Háptica iOS: togglear un switch dispara el Taptic Engine (iOS 17.4-26.4; Apple lo parcheó en 26.5+). Mejora progresiva: si no funciona, no pasa nada. -->
@@ -373,12 +411,13 @@ const CFG = {
   PREFIJO: "cadena-explosiva-",
   LETRAS: "ABCDEFGHJKLMNPQRSTUVWXYZ",
   MIN_JUG: 2,
-  MAX_JUG: 8,
+  MAX_JUG: 12,
   VIDAS_INI: 3,
   EMOJIS: ["🦊","🐸","🐙","🦄","🐲","🦖","🐧","🐨","🦁","🐵","🦉","🐢"],
   BOMBA_MIN_MS: 7000,
   BOMBA_MAX_MS: 20000,
   PROB_ESPECIAL: 0.18,
+  ANUNCIO_SEG: 4,               /* cuenta regresiva del anuncio de ronda especial */
   HEARTBEAT_MS: 3000,
   TIMEOUT_MS: 10000,
   PAUSA_EXPLOSION_MS: 1800,
@@ -396,39 +435,122 @@ const CFG = {
 
 const POOL_LETRAS = "ABCDEFGHILMNOPRSTU".split("");
 
-function mutadores() {
-  const L = () => POOL_LETRAS[Math.floor(Math.random() * POOL_LETRAS.length)];
-  const l1 = L(), l2 = L(), l3 = L(), l4 = L();
-  return [
-    { texto: `Palabra que empiece con "${l1}"`, tipo: "empieza", param: l1 },
-    { texto: `Palabra que termine con "${l2}"`, tipo: "termina", param: l2 },
-    { texto: `Prohibida la letra "${l3}"`, tipo: "prohibida", param: l3 },
-    { texto: `Que contenga la letra "${l4}"`, tipo: "contiene", param: l4 },
-    { texto: "Palabra de al menos 7 letras", tipo: "largoMin", param: 7 },
-    { texto: "Palabra de al menos 9 letras", tipo: "largoMin", param: 9 },
-    { texto: "Palabra corta: máximo 4 letras", tipo: "largoMax", param: 4 },
-    { texto: "Palabra de exactamente 5 letras", tipo: "largoExacto", param: 5 },
-    { texto: "Empezá con la última letra de la palabra anterior", tipo: "encadena" },
-    { texto: "Algo que haya en la cocina", tipo: "libre" },
-    { texto: "Un animal", tipo: "libre" },
-    { texto: "Una comida", tipo: "libre" },
-    { texto: "Un país o ciudad", tipo: "libre", sinDicc: true },
-    { texto: "Un nombre propio", tipo: "libre", sinDicc: true },
-    { texto: "Algo de color rojo", tipo: "libre" },
-    { texto: "Una parte del cuerpo", tipo: "libre" },
-    { texto: "Una marca conocida", tipo: "libre", sinDicc: true },
-    { texto: "Un objeto que tengas cerca ahora", tipo: "libre" },
-    { texto: "Algo que se pueda tomar", tipo: "libre" },
-    { texto: "Un deporte", tipo: "libre" },
-    { texto: "Una profesión", tipo: "libre" },
-    { texto: "Un instrumento musical", tipo: "libre" },
-    { texto: "Algo que vuele", tipo: "libre" },
-    { texto: "Una palabra que rime con \"amor\"", tipo: "libre" },
-    { texto: "Un personaje de peli o serie", tipo: "libre", sinDicc: true },
-    { texto: "Algo que encuentres en la playa", tipo: "libre" },
-    { texto: "Una fruta o verdura", tipo: "libre" }
+/* ========== 3a. CONSIGNAS: categorías con listas de palabras válidas, rimas y reglas de letras ========== */
+const CONSIGNAS = (() => {
+  const CATS = [
+    { id: "frutas", texto: "Una fruta o verdura", palabras: "manzana banana naranja pera uva sandia melon durazno ciruela cereza frutilla fresa frambuesa mora arandano kiwi anana mango papaya palta aguacate limon lima pomelo mandarina higo granada coco damasco nispero membrillo caqui maracuya guayaba tomate papa patata batata zanahoria cebolla ajo lechuga espinaca acelga rucula repollo coliflor brocoli zapallo calabaza zapallito berenjena pepino morron pimiento choclo maiz arveja chaucha poroto lenteja garbanzo remolacha rabanito rabano apio puerro perejil albahaca alcaucil esparrago champiñon hongo pina ananá".split(" ") },
+    { id: "animales", texto: "Un animal", palabras: "perro gato leon tigre elefante jirafa cebra mono gorila chimpance oso lobo zorro conejo liebre raton rata ardilla ciervo venado caballo yegua burro mula vaca toro buey ternero oveja cordero cabra chivo cerdo chancho gallina gallo pollo pato ganso pavo paloma gorrion canario loro papagayo tucan condor aguila halcon buho lechuza murcielago ballena delfin orca tiburon pez atun salmon merluza pulpo calamar cangrejo langosta tortuga serpiente vibora lagarto iguana cocodrilo yacare rana sapo hormiga abeja avispa mosca mosquito araña escorpion caracol lombriz mariposa grillo pinguino foca morsa hipopotamo rinoceronte hiena leopardo guepardo pantera puma jaguar llama alpaca vicuña guanaco carpincho vizcacha nutria castor erizo koala canguro panda camello dromedario ñandu avestruz flamenco garza cisne gaviota pelicano colibri picaflor hornero zorrino comadreja gusano bicho polilla ciempies cucaracha".split(" ") },
+    { id: "instrumentos", texto: "Un instrumento musical", palabras: "guitarra piano violin viola violonchelo chelo contrabajo arpa flauta clarinete oboe fagot saxofon saxo trompeta trombon tuba corno bateria tambor bombo redoblante platillo timbal pandereta maraca guiro cencerro triangulo xilofon xilofono marimba vibrafono acordeon bandoneon armonica organo teclado sintetizador bajo ukelele banjo mandolina charango cuatro quena zampoña sikus bongo conga cajon castañuela campana laud citara gaita".split(" ") },
+    { id: "comidas", texto: "Una comida", palabras: "pizza empanada milanesa asado choripan chorizo hamburguesa pancho fideo tallarin ravioles ñoquis lasaña canelones polenta guiso locro estofado puchero sopa ensalada tarta tortilla omelette huevo arroz risotto paella sushi taco burrito sandwich tostado medialuna factura pan galletita torta budin flan helado chocolate alfajor mermelada queso jamon salame mortadela pate manteca yogur cereal avena churrasco bife costilla matambre vacio entraña provoleta morcilla salchicha pure crepe panqueque wafle tostada canelon ñoqui raviol pastel guisado sanguche pebete chipa fajita nachos ceviche wok curry".split(" ") },
+    { id: "bebidas", texto: "Algo que se pueda tomar", palabras: "agua leche cafe te mate terere jugo gaseosa limonada naranjada licuado batido chocolatada vino cerveza fernet whisky vodka ron gin tequila champan sidra vermut licor caña grapa soda tonica energizante smoothie capuchino cortado latte espresso submarino infusion tisana kombucha ponche sangria daiquiri mojito margarita malta cocacola sprite yogur cocktail trago".split(" ") },
+    { id: "cuerpo", texto: "Una parte del cuerpo", palabras: "cabeza pelo cabello frente ceja pestaña ojo nariz mejilla cachete boca labio diente muela lengua menton oreja cuello nuca garganta hombro brazo codo antebrazo muñeca mano palma dedo uña puño pecho espalda cintura cadera panza abdomen ombligo pierna muslo rodilla pantorrilla tobillo pie talon planta empeine corazon pulmon higado riñon estomago intestino cerebro hueso musculo piel sangre vena arteria costilla columna craneo mandibula clavicula femur cara rostro barbilla axila torso gluteo cola".split(" ") },
+    { id: "deportes", texto: "Un deporte", palabras: "futbol tenis basquet basquetbol voley voleibol handball handbol rugby hockey golf natacion atletismo ciclismo boxeo judo karate taekwondo lucha esgrima arqueria tiro remo canotaje surf skate patinaje ski esqui snowboard alpinismo escalada maraton triatlon gimnasia yoga pilates crossfit padel paddle squash badminton beisbol softbol cricket polo equitacion hipismo motociclismo automovilismo karting rally ajedrez pesca futsal waterpolo".split(" ") },
+    { id: "profesiones", texto: "Una profesión u oficio", palabras: "medico doctor enfermero dentista odontologo maestro profesor abogado contador ingeniero arquitecto albañil carpintero plomero gasista electricista mecanico panadero carnicero verdulero pescador cocinero chef mozo camarero bombero policia militar soldado piloto azafata chofer taxista colectivero camionero periodista escritor actor actriz cantante musico bailarin pintor artista fotografo diseñador programador cientifico quimico fisico biologo veterinario farmaceutico psicologo kinesiologo peluquero barbero modista sastre zapatero joyero relojero jardinero agricultor granjero minero juez fiscal secretario cajero vendedor repartidor cartero portero sereno guardia traductor locutor payaso mago costurera niñera".split(" ") },
+    { id: "vuela", texto: "Algo que vuele", palabras: "avion helicoptero avioneta jet cohete globo drone dron paloma aguila condor halcon gaviota murcielago mariposa abeja avispa mosca mosquito libelula cometa barrilete pajaro loro colibri gorrion buho lechuza planeador parapente flecha hoja pluma polilla cigueña garza pato ganso golondrina".split(" ") },
+    { id: "cocina", texto: "Algo que haya en la cocina", palabras: "olla sarten cacerola horno hornalla heladera freezer microondas pava tetera cafetera licuadora batidora tostadora plato vaso taza jarra tenedor cuchillo cuchara cucharon espumadera colador rallador pelapapas abrelatas sacacorchos destapador tabla fuente bandeja bol repasador delantal esponja detergente trapo mesada alacena cajon azucarera salero pimentero aceitera vinagrera mantel servilleta termo mate bombilla tupper fosforo encendedor balanza cubierto molde budinera".split(" ") },
+    { id: "playa", texto: "Algo que encuentres en la playa", palabras: "arena mar ola sombrilla reposera lona toalla malla bikini ojota protector bronceador castillo balde pala rastrillo caracol almeja estrella medusa aguaviva cangrejo gaviota alga piedra roca muelle salvavidas boya tabla barco lancha velero red pescador pelota paleta turista bañero espuma marea concha coco".split(" ") },
+    { id: "ropa", texto: "Una prenda de ropa o calzado", palabras: "remera camisa camiseta chomba buzo campera abrigo saco traje pantalon jean bermuda short pollera falda vestido calza media zoquete zapatilla zapato bota botin sandalia ojota alpargata gorra gorro sombrero bufanda guante cinturon corbata overol delantal pijama camison bata calzoncillo bombacha corpiño musculosa chaleco tapado poncho ruana pañuelo blusa cardigan sweater pulover mono mocasin".split(" ") },
+    { id: "transporte", texto: "Un medio de transporte", palabras: "auto coche camioneta camion colectivo omnibus micro taxi remis moto motocicleta bicicleta bici monopatin patineta skate tren subte tranvia avion helicoptero barco lancha velero canoa kayak balsa ferry crucero submarino cohete globo carreta trineo funicular teleferico patines caballo avioneta jet furgoneta combi".split(" ") },
+    { id: "banio", texto: "Algo que haya en el baño", palabras: "inodoro bidet lavatorio lavamanos ducha bañera bañadera espejo toalla toallon jabon shampoo acondicionador crema cepillo pasta dentifrico peine secador afeitadora espuma desodorante perfume colonia papel canilla grifo cortina alfombra balanza botiquin algodon curita hisopo esponja bacha".split(" ") },
+    { id: "escuela", texto: "Un útil o algo de la escuela", palabras: "lapiz lapicera birome boligrafo goma borrador sacapuntas regla escuadra transportador compas cuaderno carpeta hoja folio cartuchera mochila libro diccionario mapa pizarron pizarra tiza fibron marcador resaltador crayon plasticola pegamento tijera cinta papel tempera pincel acuarela calculadora escritorio pupitre banco silla campana timbre uniforme guardapolvo apunte examen boletin".split(" ") },
+    { id: "muebles", texto: "Un mueble", palabras: "mesa silla sillon sofa cama catre cuchetas placard ropero armario comoda cajonera mesita velador escritorio biblioteca estanteria estante repisa banco banqueta taburete perchero espejo rack modular vitrina aparador cuna hamaca mecedora futon puf otomana barra cucheta".split(" ") },
+    { id: "herramientas", texto: "Una herramienta", palabras: "martillo destornillador pinza alicate llave tenaza serrucho sierra taladro mecha tornillo clavo tuerca arandela lija lima metro nivel escuadra soldadora amoladora morsa prensa pala pico rastrillo carretilla machete hacha formon cepillo crique linterna escalera andamio soplete engrampadora remachadora pincel rodillo espatula cutter".split(" ") },
+    { id: "clima", texto: "Algo del clima o la naturaleza", palabras: "lluvia llovizna garua tormenta trueno relampago rayo granizo nieve nevada escarcha helada rocio niebla neblina viento brisa huracan tornado ciclon arcoiris sol nube luna estrella cometa eclipse marea ola terremoto sismo volcan erupcion sequia inundacion calor frio humedad rio lago mar montaña cerro valle cascada catarata desierto selva bosque pradera".split(" ") },
+    { id: "plantas", texto: "Una planta, árbol o flor", palabras: "rosa clavel margarita girasol tulipan jazmin lavanda orquidea violeta lirio dalia amapola crisantemo malvon geranio cactus suculenta helecho enredadera hiedra pasto cesped arbol pino cipres eucalipto sauce alamo roble quebracho algarrobo ceibo jacaranda palmera naranjo limonero manzano olivo laurel romero menta oregano albahaca ruda malva ombu araucaria bambu trebol junco totora".split(" ") },
+    { id: "colores", texto: "Un color", palabras: "rojo azul amarillo verde naranja violeta lila morado purpura rosa rosado celeste turquesa cian magenta fucsia bordo granate carmesi escarlata marron beige crema ocre dorado plateado gris negro blanco marfil salmon coral terracota oliva esmeralda zafiro indigo añil caqui mostaza lavanda".split(" ") },
+    { id: "rojas", texto: "Algo de color rojo", palabras: "tomate frutilla fresa cereza manzana sandia morron pimiento sangre corazon fuego labial rubi ketchup salsa granada rabanito remolacha vino semaforo langosta camaron cangrejo amapola rosa clavel chorizo ladrillo lengua ferrari marte cresta bombero".split(" ") },
+    { id: "paises", texto: "Un país o ciudad", palabras: "argentina brasil chile uruguay paraguay bolivia peru ecuador colombia venezuela mexico guatemala honduras nicaragua panama cuba haiti jamaica canada españa francia italia alemania portugal inglaterra escocia irlanda holanda belgica suiza austria grecia turquia rusia ucrania polonia suecia noruega finlandia dinamarca china japon india pakistan iran irak israel egipto marruecos argelia tunez libia sudafrica nigeria kenia etiopia australia indonesia filipinas tailandia vietnam corea singapur malasia qatar cordoba rosario mendoza salta jujuy tucuman neuquen bariloche ushuaia posadas corrientes resistencia formosa rawson viedma santiago lima bogota caracas quito asuncion montevideo brasilia paris londres madrid barcelona sevilla roma milan venecia florencia berlin munich amsterdam bruselas lisboa oporto moscu tokio pekin shanghai seul bangkok sidney melbourne miami orlando chicago boston dallas houston washington toronto vancouver dublin praga viena budapest atenas estambul cairo dubai casablanca".split(" ") },
+    { id: "casa", texto: "Un lugar o parte de la casa", palabras: "cocina comedor living dormitorio habitacion pieza baño lavadero garage garaje cochera patio jardin balcon terraza azotea techo pared piso escalera pasillo entrada puerta ventana sotano altillo quincho galeria vestibulo hall porton reja tapial vereda".split(" ") },
+    { id: "aparatos", texto: "Un aparato eléctrico o tecnológico", palabras: "televisor tele celular telefono computadora notebook tablet radio parlante auricular microfono camara consola control cargador heladera freezer lavarropas secarropas microondas horno licuadora batidora cafetera tostadora plancha aspiradora ventilador estufa calefactor termotanque calefon router modem impresora mouse teclado monitor pendrive drone dron reloj smartwatch proyector joystick playstation nintendo".split(" ") },
+    { id: "cielo", texto: "Algo que se ve en el cielo", palabras: "sol luna estrella nube cometa planeta satelite avion helicoptero globo pajaro relampago rayo arcoiris eclipse constelacion galaxia meteorito aurora dron drone ovni cohete luceros gaviota paloma aguila".split(" ") },
+    { id: "dulces", texto: "Un postre o algo dulce", palabras: "helado flan budin torta tarta alfajor chocolate bombon caramelo chupetin gomita turron mazapan churro dona panqueque crepe waffle wafle gelatina mousse tiramisu brownie cookie galletita merengue chantilli mermelada miel azucar garrapiñada pastelito medialuna factura oblea natilla vainilla bizcochuelo rogel chocotorta cubanito conito".split(" ") }
   ];
-}
+  const RIMAS = [
+    ["or","amor"],["on","corazón"],["ar","cantar"],["er","comer"],["ir","dormir"],
+    ["ente","caliente"],["ado","helado"],["ida","comida"],["ero","sombrero"],["era","primavera"],
+    ["ura","aventura"],["oso","hermoso"],["osa","rosa"],["al","animal"],["eza","cabeza"],
+    ["illa","silla"],["ito","mosquito"],["ano","verano"],["ino","camino"],["dad","ciudad"],
+    ["cion","canción"],["ela","escuela"],["ojo","rojo"],["ante","elefante"],
+    ["ina","cocina"],["ora","señora"],["azo","abrazo"],["ete","juguete"],
+    ["ista","artista"],["able","amable"],["encia","paciencia"],["aje","viaje"],
+    ["ivo","activo"],["oro","tesoro"],["ana","ventana"],["ual","igual"]
+  ];
+  const norm = w => w.toLowerCase().normalize("NFD").replace(/n\u0303/g, "\u00f1").replace(/[\u0300-\u036f]/g, "").normalize("NFC");
+  const sets = {};
+  CATS.forEach(c => { sets[c.id] = new Set(c.palabras.map(norm)); });
+  function enCategoria(catId, t) {
+    const s = sets[catId];
+    if (!s) return true;
+    if (s.has(t)) return true;
+    if (t.endsWith("es") && s.has(t.slice(0, -2))) return true;   /* plurales */
+    if (t.endsWith("s") && s.has(t.slice(0, -1))) return true;
+    return false;
+  }
+  /* pool de consignas: base + combinaciones factibles (largo mínimo / letra inicial) */
+  const pool = [];
+  const ABC = "abcdefghijlmnoprstuvz".split("");
+  CATS.forEach(c => {
+    const ws = [...sets[c.id]];
+    pool.push({ id: "c:" + c.id, tipo: "categoria", cat: c.id, texto: c.texto });
+    /* largo mínimo */
+    [4, 5, 6, 7, 8].forEach(m => {
+      if (ws.filter(w => w.length >= m).length >= 10)
+        pool.push({ id: "c:" + c.id + ":m" + m, tipo: "categoria", cat: c.id, min: m, texto: c.texto + " de " + m + "+ letras" });
+    });
+    /* letra inicial (y con largo mínimo si hay de sobra) */
+    const porIni = {};
+    ws.forEach(w => porIni[w[0]] = (porIni[w[0]] || 0) + 1);
+    Object.keys(porIni).forEach(l => {
+      if (porIni[l] >= 6 && /[a-z]/.test(l)) {
+        pool.push({ id: "c:" + c.id + ":i" + l, tipo: "categoria", cat: c.id, ini: l, texto: c.texto + ' que empiece con "' + l.toUpperCase() + '"' });
+        if (ws.filter(w => w[0] === l && w.length >= 6).length >= 6)
+          pool.push({ id: "c:" + c.id + ":i" + l + "m6", tipo: "categoria", cat: c.id, ini: l, min: 6, texto: c.texto + ' que empiece con "' + l.toUpperCase() + '" de 6+ letras' });
+      }
+    });
+    /* que contenga una letra */
+    ABC.forEach(l => {
+      if (ws.filter(w => w.includes(l)).length >= 8)
+        pool.push({ id: "c:" + c.id + ":k" + l, tipo: "categoria", cat: c.id, cont: l, texto: c.texto + ' que tenga la letra "' + l.toUpperCase() + '"' });
+    });
+    /* con una letra prohibida */
+    "aeiours".split("").forEach(l => {
+      if (ws.filter(w => !w.includes(l)).length >= 8)
+        pool.push({ id: "c:" + c.id + ":p" + l, tipo: "categoria", cat: c.id, sin: l, texto: c.texto + ' SIN la letra "' + l.toUpperCase() + '"' });
+    });
+  });
+  RIMAS.forEach(([suf, ej]) => pool.push({ id: "r:" + suf, tipo: "rima", suf, texto: 'Una palabra que rime con "' + ej + '" (que termine en -' + suf + ")" }));
+  "abcdefghilmnoprstu".split("").forEach(l => {
+    pool.push({ id: "e:" + l, tipo: "empieza", param: l.toUpperCase(), texto: 'Palabra que empiece con "' + l.toUpperCase() + '"' });
+    pool.push({ id: "k:" + l, tipo: "contiene", param: l.toUpperCase(), texto: 'Que contenga la letra "' + l.toUpperCase() + '"' });
+  });
+  "aeosrnilct".split("").forEach(l => pool.push({ id: "p:" + l, tipo: "prohibida", param: l.toUpperCase(), texto: 'Prohibida la letra "' + l.toUpperCase() + '"' }));
+  "aosnrel".split("").forEach(l => pool.push({ id: "t:" + l, tipo: "termina", param: l.toUpperCase(), texto: 'Palabra que termine con "' + l.toUpperCase() + '"' }));
+  pool.push({ id: "l:m7", tipo: "largoMin", param: 7, texto: "Palabra de al menos 7 letras" });
+  pool.push({ id: "l:m8", tipo: "largoMin", param: 8, texto: "Palabra de al menos 8 letras" });
+  pool.push({ id: "l:m9", tipo: "largoMin", param: 9, texto: "Palabra de al menos 9 letras" });
+  pool.push({ id: "l:x4", tipo: "largoMax", param: 4, texto: "Palabra corta: máximo 4 letras" });
+  pool.push({ id: "l:e5", tipo: "largoExacto", param: 5, texto: "Palabra de exactamente 5 letras" });
+  pool.push({ id: "l:e6", tipo: "largoExacto", param: 6, texto: "Palabra de exactamente 6 letras" });
+  return { pool, enCategoria };
+})();
+
+/* Rotación persistente: recuerda qué consignas ya salieron (aunque se cierre la app)
+   y siempre elige entre las menos usadas → no se repiten hasta agotar el pool completo. */
+const ROTACION = {
+  clave: "cadena_uso_consignas_v1",
+  uso: (() => { try { return JSON.parse(localStorage.getItem("cadena_uso_consignas_v1")) || {}; } catch (e) { return {}; } })(),
+  elegir(excluir) {
+    let cands = CONSIGNAS.pool.filter(c => !excluir.has(c.id));
+    if (!cands.length) cands = CONSIGNAS.pool;
+    let min = Infinity;
+    cands.forEach(c => { const u = this.uso[c.id] || 0; if (u < min) min = u; });
+    const top = cands.filter(c => (this.uso[c.id] || 0) === min);
+    const el = top[Math.floor(Math.random() * top.length)];
+    this.uso[el.id] = (this.uso[el.id] || 0) + 1;
+    try { localStorage.setItem(this.clave, JSON.stringify(this.uso)); } catch (e) {}
+    return el;
+  }
+};
 
 const ESPECIALES = [
   { texto: "🔥 MECHA CORTA: la bomba explota MUCHO más rápido", tipo: "libre", flag: "mechaCorta" },
@@ -511,11 +633,12 @@ const NET = {
       GAME.limpiarTimer();
       const rondaAntes = GAME.state.ronda;
       const sig = GAME.proximoTurno(conn.peer);
-      if (sig) {
-        if (GAME.state.ronda === rondaAntes && !GAME.state.esEspecial) GAME.state.reglaActual = GAME.nuevaRegla();
+      if (sig == null) GAME.chequearFin();
+      else if (GAME.state.ronda !== rondaAntes) GAME.prepararRonda(sig);
+      else {
+        if (!GAME.state.esEspecial) GAME.state.reglaActual = GAME.reglaNormal();
         GAME.pasarBombaA(sig);
       }
-      else GAME.chequearFin();
     }
     this.broadcastState(); UI.render();
   },
@@ -644,7 +767,7 @@ const NET = {
       if (msg.kind === "invalida" && msg.data.id === LOCAL.miId) {
         UI.feedbackMal(msg.data.motivo); AUDIO.error();
         const inp = document.getElementById("in-palabra");
-        if (inp && !inp.value && UI.ultimaEnviada) { inp.value = UI.ultimaEnviada; try { inp.focus(); } catch (e) {} }
+        if (inp && !inp.value && UI.ultimaEnviada) inp.value = UI.ultimaEnviada;
       }
       if (msg.kind === "paso" && msg.data.id !== LOCAL.miId) AUDIO.pop();
       if (msg.kind === "turnoVencido" && msg.data.id === LOCAL.miId) UI.avisoTurnoVencido();
@@ -662,10 +785,12 @@ const GAME = {
   state: {
     fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false,
     palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {},
-    modo: "clasico", turnoSeg: null, mechaFrac: null
+    modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null
   },
   bombaTimer: null,
   ultimoNonce: {},
+  anuncioInt: null,               /* intervalo del anuncio de ronda especial */
+  consignasPartida: new Set(),    /* consignas ya usadas en ESTA partida (no repetir dentro) */
   enPausa: false,   // FIX QA: true durante la pausa post-explosión (nadie tiene la bomba)
   /* --- orden de turnos por ronda (solo host): cada ronda arranca en un jugador al azar --- */
   orden: [], ordenIdx: 0,
@@ -693,7 +818,6 @@ const GAME = {
         if (!this.vivos().length) return null;
         this.state.ronda++;
         this.nuevaRonda(actualId);
-        this.state.reglaActual = this.nuevaRegla();
         if (!this.orden.length) return null;
       }
       const id = this.orden[this.ordenIdx];
@@ -716,14 +840,49 @@ const GAME = {
     if (!this.state.stats[id]) this.state.stats[id] = { quemado: 0, pasadas: 0, masLargo: 0 };
     return this.state.stats[id];
   },
-  nuevaRegla() {
-    const especial = Math.random() < CFG.PROB_ESPECIAL;
-    let regla;
-    if (especial) { regla = { ...ESPECIALES[Math.floor(Math.random() * ESPECIALES.length)] }; this.state.esEspecial = true; }
-    else { const pool = mutadores(); regla = pool[Math.floor(Math.random() * pool.length)]; this.state.esEspecial = false; }
-    if (regla.tipo === "dobleEscala") { regla.nivel = 0; regla.letraCont = null; regla.letraIni = null; regla.texto = this.textoDoble(regla); }
-    this.state.usadas = []; this.state.ultimaPalabra = "";
-    return regla;
+  /* Consigna normal desde el pool con rotación persistente (las palabras usadas NO se limpian: duran toda la partida) */
+  reglaNormal() {
+    const c = ROTACION.elegir(this.consignasPartida);
+    this.consignasPartida.add(c.id);
+    this.state.esEspecial = false;
+    this.state.ultimaPalabra = "";
+    return { ...c };
+  },
+  reglaEspecial() {
+    const r = { ...ESPECIALES[Math.floor(Math.random() * ESPECIALES.length)] };
+    if (r.tipo === "dobleEscala") { r.nivel = 0; r.letraCont = null; r.letraIni = null; r.texto = this.textoDoble(r); }
+    this.state.esEspecial = true;
+    this.state.ultimaPalabra = "";
+    return r;
+  },
+  /* Arranque de ronda: si toca especial, primero el anuncio para todos con cuenta regresiva */
+  prepararRonda(primeroId) {
+    if (primeroId == null) { this.chequearFin(); return; }
+    if (Math.random() < CFG.PROB_ESPECIAL) {
+      this.state.reglaActual = this.reglaEspecial();
+      this.anunciarEspecial(primeroId);
+    } else {
+      this.state.reglaActual = this.reglaNormal();
+      this.pasarBombaA(primeroId);
+    }
+  },
+  anunciarEspecial(primeroId) {
+    this.state.bombaEn = null;
+    this.state.palabraActual = "";
+    this.enPausa = true;
+    this.state.anuncioSeg = CFG.ANUNCIO_SEG;
+    if (this.anuncioInt) clearInterval(this.anuncioInt);
+    AUDIO.tick(); UI.vibrar([40]);
+    NET.broadcastState(); UI.render();
+    this.anuncioInt = setInterval(() => {
+      this.state.anuncioSeg--;
+      if (this.state.anuncioSeg <= 0) {
+        clearInterval(this.anuncioInt); this.anuncioInt = null;
+        this.state.anuncioSeg = null;
+        this.enPausa = false;
+        this.pasarBombaA(primeroId);
+      } else { AUDIO.tick(); NET.broadcastState(); UI.render(); }
+    }, 1000);
   },
   textoDoble(r) {
     const n = Math.min(r.nivel || 0, DOBLE_MIN.length - 1);
@@ -747,14 +906,14 @@ const GAME = {
     if (activos.length < CFG.MIN_JUG) { UI.banner("Faltan jugadores conectados para arrancar.", null, true); setTimeout(() => UI.ocultarBanner(), 2500); return; }
     DICC.cargar();
     this.limpiarTimer(); this.enPausa = false; this.ultimoNonce = {};
+    this.consignasPartida = new Set();
     this.state.jugadores.forEach(j => j.vidas = CFG.VIDAS_INI);
     this.state.fase = "jugando"; this.state.ronda = 1; this.state.stats = {};
-    this.state.turnoSeg = null; this.state.mechaFrac = null;
+    this.state.turnoSeg = null; this.state.mechaFrac = null; this.state.anuncioSeg = null;
     this.state.palabraActual = ""; this.state.usadas = []; this.state.ultimaPalabra = "";
-    this.state.reglaActual = this.nuevaRegla();
     this.nuevaRonda(null);
     if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
-    this.pasarBombaA(this.orden[0]);
+    this.prepararRonda(this.orden[0]);
     NET.broadcastState(); UI.irJuego();
   },
   pasarBombaA(id) {
@@ -832,6 +991,7 @@ const GAME = {
     this.bombaTimer = setTimeout(() => this.explota(), ms);
   },
   limpiarTimer() {
+    if (this.anuncioInt) { clearInterval(this.anuncioInt); this.anuncioInt = null; }
     if (this.bombaTimer) { clearTimeout(this.bombaTimer); this.bombaTimer = null; }
     this.pararTick();
   },
@@ -841,16 +1001,23 @@ const GAME = {
     if (crudo.length < 2) return { ok: false, motivo: "Muy corta." };
     if (crudo.length > 40) return { ok: false, motivo: "Demasiado larga." };
     const t = DICC.normalizar(crudo);
-    const sinDicc = !!(regla && regla.sinDicc);
-    if (sinDicc) {
-      if (!/^[a-zñ ]+$/.test(t)) return { ok: false, motivo: "Solo letras." };
-    } else {
-      if (!/^[a-zñ]+$/.test(t)) return { ok: false, motivo: "Una sola palabra, solo letras." };
-      if (!DICC.existe(t)) return { ok: false, motivo: "Esa palabra no existe. Fijate cómo se escribe." };
-    }
-    if (this.state.usadas.includes(t)) return { ok: false, motivo: "Esa ya la dijeron." };
+    if (!/^[a-zñ]+$/.test(t)) return { ok: false, motivo: "Una sola palabra, solo letras." };
+    /* en consignas de categoría manda la lista propia; en el resto, el diccionario */
+    if (!(regla && regla.tipo === "categoria") && !DICC.existe(t)) return { ok: false, motivo: "Esa palabra no existe. Fijate cómo se escribe." };
+    if (this.state.usadas.includes(t)) return { ok: false, motivo: "Ya se usó en esta partida." };
     if (!regla) return { ok: true, palabra: t };
     switch (regla.tipo) {
+      case "categoria": {
+        if (regla.min && t.length < regla.min) return { ok: false, motivo: `Mínimo ${regla.min} letras.` };
+        if (regla.ini && t[0] !== regla.ini) return { ok: false, motivo: `Tiene que empezar con "${regla.ini.toUpperCase()}".` };
+        if (regla.cont && !t.includes(regla.cont)) return { ok: false, motivo: `Tiene que tener la letra "${regla.cont.toUpperCase()}".` };
+        if (regla.sin && t.includes(regla.sin)) return { ok: false, motivo: `No puede tener la letra "${regla.sin.toUpperCase()}".` };
+        return CONSIGNAS.enCategoria(regla.cat, t) ? { ok: true } : { ok: false, motivo: "Eso no entra en la consigna. Probá con otra." };
+      }
+      case "rima": {
+        if (t.length < regla.suf.length + 2) return { ok: false, motivo: "Muy corta para valer como rima." };
+        return t.endsWith(regla.suf) ? { ok: true } : { ok: false, motivo: `Tiene que terminar en "-${regla.suf}".` };
+      }
       case "dobleEscala": {
         const n = Math.min(regla.nivel || 0, DOBLE_MIN.length - 1);
         const min = DOBLE_MIN[n];
@@ -891,7 +1058,7 @@ const GAME = {
       if (deId === LOCAL.miId) {
         UI.feedbackMal(res.motivo); AUDIO.error();
         const inp = document.getElementById("in-palabra");
-        if (inp && !inp.value && UI.ultimaEnviada) { inp.value = UI.ultimaEnviada; try { inp.focus(); } catch (e) {} }
+        if (inp && !inp.value && UI.ultimaEnviada) inp.value = UI.ultimaEnviada;
       }
       NET.broadcastState(); UI.render();
       return;
@@ -909,11 +1076,11 @@ const GAME = {
     if (deId === LOCAL.miId) AUDIO.pop();
     const rondaAntes = this.state.ronda;
     const sig = this.proximoTurno(deId);
-    if (this.state.ronda === rondaAntes) {
-      // seguimos dentro de la misma ronda
-      if (!this.state.esEspecial) this.state.reglaActual = this.nuevaRegla();
-      else if (this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
-    }
+    if (sig == null) { this.chequearFin(); return; }
+    if (this.state.ronda !== rondaAntes) { this.prepararRonda(sig); return; }
+    // seguimos dentro de la misma ronda
+    if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
+    else if (this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
     this.pasarBombaA(sig);
   },
 
@@ -939,9 +1106,8 @@ const GAME = {
       if (this.chequearFin()) return;
       this.state.ronda++;
       this.nuevaRonda(perdedorId);
-      this.state.reglaActual = this.nuevaRegla();
       if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
-      this.pasarBombaA(this.orden[0] || null);
+      this.prepararRonda(this.orden[0] || null);
     }, CFG.PAUSA_EXPLOSION_MS);
   },
 
@@ -949,7 +1115,7 @@ const GAME = {
     if (this.vivos().length <= 1) {
       this.limpiarTimer();
       this.enPausa = false;
-      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null;
+      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null; this.state.anuncioSeg = null; this.state.anuncioSeg = null;
       NET.broadcastState(); UI.irPodio();
       return true;
     }
@@ -989,7 +1155,7 @@ const UI = {
   turnoFresco() {
     this.ultimaEnviada = "";
     const inp = document.getElementById("in-palabra");
-    if (inp) { inp.value = ""; try { inp.focus({ preventScroll: false }); } catch (e) {} }
+    if (inp) inp.value = "";
     const btnP = document.getElementById("btn-pasar");
     if (btnP) btnP.disabled = false;
     if (LOCAL.soyHost) { GAME.state.palabraActual = ""; }
@@ -1153,10 +1319,13 @@ const UI = {
       const pl = document.getElementById("palabra-live");
       pl.innerHTML = (!laTengoYo && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
       const us = document.getElementById("usadas");
-      us.textContent = (st.usadas && st.usadas.length) ? "Ya dichas: " + st.usadas.slice(-6).join(" \u00b7 ") : "";
+      us.textContent = (st.usadas && st.usadas.length)
+        ? `Ya dichas (${st.usadas.length}): ` + st.usadas.slice(-8).join(" \u00b7 ") + (st.usadas.length > 8 ? " \u00b7 \u2026" : "")
+        : "";
 
       const tm = document.getElementById("turno-mio");
       tm.style.display = laTengoYo ? "block" : "none";
+      document.getElementById("app").classList.toggle("teclado", laTengoYo);
       const rm = document.getElementById("regla-mini");
       if (rm) {
         rm.textContent = st.reglaActual ? st.reglaActual.texto : "";
@@ -1176,6 +1345,18 @@ const UI = {
       });
     } else {
       document.getElementById("app").classList.remove("hot-bg");
+      document.getElementById("app").classList.remove("teclado");
+    }
+
+    /* anuncio a pantalla completa de ronda especial (para todos, con cuenta regresiva) */
+    const an = document.getElementById("anuncio");
+    if (an) {
+      const activo = st.fase === "jugando" && st.anuncioSeg != null;
+      an.classList.toggle("on", activo);
+      if (activo) {
+        document.getElementById("anuncio-txt").textContent = st.reglaActual ? st.reglaActual.texto : "";
+        document.getElementById("anuncio-count").textContent = st.anuncioSeg;
+      }
     }
 
     if (st.fase === "podio") {
@@ -1224,6 +1405,40 @@ const UI = {
       el.innerHTML = `<span class="ic">${p.ic}</span><div class="txt-p"><b>${p.t}</b><span> ${p.n}</span><small>${p.s}</small></div>`;
       cont.appendChild(el);
     });
+  },
+
+  /* ===== teclado propio: sin autocorrector ni sugerencias, la consigna nunca se tapa ===== */
+  initTeclado() {
+    const cont = document.getElementById("teclado-propio");
+    if (!cont) return;
+    cont.innerHTML = "";
+    ["qwertyuiop", "asdfghjklñ", "zxcvbnm⌫"].forEach(f => {
+      const fila = document.createElement("div");
+      fila.className = "fila-teclas";
+      f.split("").forEach(ch => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "tecla" + (ch === "⌫" ? " ancha" : "");
+        b.textContent = ch;
+        b.addEventListener("pointerdown", (e) => { e.preventDefault(); UI.tecla(ch); });
+        fila.appendChild(b);
+      });
+      cont.appendChild(fila);
+    });
+  },
+  tecla(ch) {
+    const inp = document.getElementById("in-palabra");
+    if (!inp) return;
+    if (ch === "⌫") inp.value = inp.value.slice(0, -1);
+    else if (inp.value.length < 40) inp.value += ch;
+    try { if (navigator.vibrate) navigator.vibrate(8); } catch (e) {}
+    this.notificarTipeo();
+  },
+  notificarTipeo() {
+    const inp = document.getElementById("in-palabra");
+    const texto = inp ? inp.value : "";
+    if (LOCAL.soyHost) { GAME.state.palabraActual = texto.slice(0, 40); NET.broadcastState(); }
+    else NET.enviarInput({ kind: "tipeando", texto });
   },
 
   ultimaEnviada: "",
@@ -1334,7 +1549,7 @@ const UI = {
     LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null; LOCAL.enSala = false;
     GAME.limpiarTimer(); GAME.ultimoNonce = {}; GAME.enPausa = false;
     GAME.orden = []; GAME.ordenIdx = 0;
-    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null };
+    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null };
     const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
     document.getElementById("app").classList.remove("hot-bg");
     this.ocultarBanner();
@@ -1393,27 +1608,12 @@ UI.initEmojis();
 document.getElementById("in-codigo").addEventListener("input", (e) => {
   e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
 });
-document.getElementById("in-palabra").addEventListener("input", (e) => {
-  const texto = e.target.value;
-  if (LOCAL.soyHost) { GAME.state.palabraActual = texto.slice(0, 40); NET.broadcastState(); }
-  else NET.enviarInput({ kind: "tipeando", texto });
-});
+/* input físico (PC) sigue andando; en el celu se escribe con el teclado propio del juego */
+document.getElementById("in-palabra").addEventListener("input", () => UI.notificarTipeo());
 document.getElementById("in-palabra").addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); UI.enviarPalabra(); }
 });
-/* Teclado abierto → modo compacto: la regla queda siempre visible arriba del casillero */
-const inPalabra = document.getElementById("in-palabra");
-inPalabra.addEventListener("focus", () => {
-  document.getElementById("app").classList.add("teclado");
-  setTimeout(() => { try { window.scrollTo(0, 0); document.getElementById("regla-box").scrollIntoView({ block: "start" }); } catch (e) {} }, 250);
-});
-inPalabra.addEventListener("blur", () => document.getElementById("app").classList.remove("teclado"));
-if (window.visualViewport) {
-  window.visualViewport.addEventListener("resize", () => {
-    const abierto = window.visualViewport.height < window.innerHeight * 0.78;
-    document.getElementById("app").classList.toggle("teclado", abierto && document.activeElement === inPalabra);
-  });
-}
+UI.initTeclado();
 document.body.addEventListener("touchstart", () => AUDIO.desbloquear(), { once: true });
 document.body.addEventListener("click", () => AUDIO.desbloquear(), { once: true });
 window.addEventListener("beforeunload", () => { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} });
