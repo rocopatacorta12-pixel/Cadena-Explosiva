@@ -1,0 +1,8 @@
+{
+  "appId": "com.rafa.cadenaexplosiva",
+  "appName": "Cadena Explosiva",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https"
+  }
+}

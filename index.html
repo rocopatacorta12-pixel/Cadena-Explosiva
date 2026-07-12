@@ -1,0 +1,1259 @@
+<!-- Cadena Explosiva v1.2.1 — Háptica iOS (switch oculto) como mejora progresiva -->
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>💣 Cadena Explosiva</title>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<style>
+/* ========== 1. ESTILOS ========== */
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --bg: #0d0b1a;
+  --bg2: #17142b;
+  --card: #1e1a38;
+  --accent: #ff5722;
+  --accent2: #ffb300;
+  --ok: #26d07c;
+  --txt: #f2f0ff;
+  --muted: #9a94c0;
+  --danger: #ff3b5c;
+  --especial: #b06bff;
+}
+html, body {
+  height: 100%;
+  background: radial-gradient(circle at 50% 0%, var(--bg2), var(--bg));
+  color: var(--txt);
+  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+}
+#app { min-height: 100%; display: flex; flex-direction: column; padding: 20px 16px 32px; transition: background .3s; }
+#app.shake { animation: shake .5s; }
+#app.hot-bg { background: radial-gradient(circle at 50% 40%, rgba(255,87,34,.18), transparent 60%); }
+@keyframes shake {
+  0%,100% { transform: translateX(0); }
+  10%,30%,50%,70%,90% { transform: translateX(-9px); }
+  20%,40%,60%,80% { transform: translateX(9px); }
+}
+
+.pantalla { display: none; flex: 1; flex-direction: column; animation: fadeIn .35s cubic-bezier(.22,1,.36,1); }
+.pantalla.activa { display: flex; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.titulo { font-size: 2.4rem; text-align: center; margin: 24px 0 6px; font-weight: 800; letter-spacing: -1px; }
+.titulo .bomba { display: inline-block; animation: latir 1.6s ease-in-out infinite; }
+@keyframes latir { 0%,100% { transform: scale(1); } 50% { transform: scale(1.15); } }
+.sub { text-align: center; color: var(--muted); margin-bottom: 28px; font-size: .95rem; }
+
+label { display: block; font-size: .85rem; color: var(--muted); margin: 0 4px 6px; }
+input[type=text] {
+  width: 100%; padding: 16px; border-radius: 14px; border: 2px solid #2c2750;
+  background: var(--card); color: var(--txt); font-size: 1.1rem; outline: none;
+  transition: border-color .2s;
+}
+input[type=text]:focus { border-color: var(--accent2); }
+.codigo-input { text-transform: uppercase; letter-spacing: 8px; text-align: center; font-size: 1.6rem; font-weight: 700; }
+
+.btn {
+  width: 100%; min-height: 56px; border: none; border-radius: 14px;
+  font-size: 1.15rem; font-weight: 700; color: #fff; cursor: pointer;
+  margin-top: 14px; transition: transform .12s cubic-bezier(.22,1,.36,1), filter .2s; touch-action: manipulation;
+}
+.btn:active { transform: scale(.96); }
+.btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+.btn-secondary { background: var(--card); border: 2px solid #2c2750; }
+.btn-ok { background: linear-gradient(135deg, var(--ok), #1fa864); font-size: 1.3rem; min-height: 64px; }
+.btn:disabled { filter: grayscale(.6) brightness(.6); cursor: default; }
+.btn-ghost { background: transparent; color: var(--muted); min-height: 44px; font-size: .95rem; margin-top: 8px; }
+
+.emoji-picker { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 14px 0; }
+.emoji-op {
+  width: 48px; height: 48px; font-size: 1.6rem; border-radius: 12px; background: var(--card);
+  border: 2px solid transparent; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  transition: transform .12s, border-color .2s;
+}
+.emoji-op:active { transform: scale(.9); }
+.emoji-op.sel { border-color: var(--accent2); background: #2c2750; transform: scale(1.08); }
+
+.card { background: var(--card); border-radius: 18px; padding: 20px; margin-top: 16px; }
+.codigo-box { text-align: center; margin: 8px 0 20px; }
+.codigo-box .label-cod { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: 2px; }
+.codigo-box .valor {
+  font-size: 3rem; font-weight: 900; letter-spacing: 12px; color: var(--accent2);
+  padding-left: 12px; margin-top: 4px;
+}
+.copiar { margin-top: 6px; color: var(--muted); font-size: .85rem; background: none; border: none; cursor: pointer; }
+
+.jugadores { list-style: none; }
+.jug {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--bg2);
+  border-radius: 12px; margin-bottom: 8px; animation: fadeIn .3s ease;
+}
+.jug .av { font-size: 1.6rem; }
+.jug .nom { font-weight: 600; flex: 1; }
+.jug .tag { font-size: .7rem; padding: 3px 8px; border-radius: 20px; background: #2c2750; color: var(--muted); }
+.jug .tag.host { background: var(--accent); color: #fff; }
+.jug .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+.jug .dot.off { background: var(--danger); }
+
+.estado-conn { text-align: center; color: var(--muted); font-size: .9rem; margin-top: 16px; min-height: 22px; }
+.spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #2c2750; border-top-color: var(--accent2); border-radius: 50%; animation: spin .8s linear infinite; vertical-align: middle; margin-right: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-msg { color: var(--danger); text-align: center; margin-top: 12px; min-height: 20px; font-size: .9rem; }
+.contador { text-align: center; color: var(--muted); font-size: .85rem; margin-top: 12px; }
+.pill { display: inline-block; background: var(--card); padding: 6px 14px; border-radius: 20px; font-size: .85rem; margin: 4px auto; }
+
+/* ---- SELECTOR DE MODO ---- */
+.modo-sel { display: flex; gap: 10px; margin-top: 16px; }
+.modo-op {
+  flex: 1; background: var(--card); border: 2px solid #2c2750; border-radius: 14px;
+  padding: 12px 10px; text-align: center; cursor: pointer; transition: border-color .2s, transform .12s;
+}
+.modo-op:active { transform: scale(.97); }
+.modo-op.sel { border-color: var(--accent2); background: #2c2750; }
+.modo-op .mi { font-size: 1.5rem; }
+.modo-op .mt { font-weight: 800; font-size: .9rem; margin-top: 4px; }
+.modo-op .md { color: var(--muted); font-size: .7rem; margin-top: 3px; line-height: 1.3; }
+.modo-op.bloqueado { pointer-events: none; opacity: .85; }
+.modo-lbl-invitado { text-align: center; color: var(--muted); font-size: .8rem; margin-top: 10px; }
+
+/* ---- CONTADOR DE TURNO (modo mecha) ---- */
+.turno-count { font-size: 2rem; font-weight: 900; text-align: center; min-height: 40px; letter-spacing: 1px; }
+.turno-count.ok { color: var(--ok); }
+.turno-count.medio { color: var(--accent2); }
+.turno-count.critico { color: var(--danger); animation: latir .5s ease-in-out infinite; }
+.bomba-grande.urgente { animation: tembleque .15s ease-in-out infinite; filter: drop-shadow(0 0 26px rgba(255,59,92,.8)); }
+
+.mute-btn { position: fixed; top: 12px; right: 12px; background: var(--card); border: none; color: var(--txt); width: 40px; height: 40px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; z-index: 40; opacity: .8; }
+
+/* ---- JUEGO ---- */
+.regla-box {
+  background: var(--card); border-radius: 16px; padding: 16px; text-align: center; margin-bottom: 8px;
+  transition: box-shadow .3s, background .3s; animation: reglaIn .35s cubic-bezier(.22,1,.36,1);
+}
+@keyframes reglaIn { from { opacity: 0; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.regla-box.especial { background: linear-gradient(135deg, rgba(176,107,255,.22), var(--card)); box-shadow: 0 0 0 2px var(--especial); }
+.regla-box .label-r { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: 2px; }
+.regla-box.especial .label-r { color: var(--especial); }
+.regla-box .regla { font-size: 1.25rem; font-weight: 800; margin-top: 4px; color: var(--accent2); }
+.regla-box.especial .regla { color: var(--especial); }
+.ronda-lbl { text-align: center; color: var(--muted); font-size: .8rem; margin-bottom: 10px; }
+.badge-especial { display: inline-block; background: var(--especial); color: #fff; font-size: .65rem; padding: 3px 8px; border-radius: 10px; font-weight: 800; letter-spacing: 1px; margin-top: 6px; }
+
+.bomba-zona { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.bomba-wrap { position: relative; width: 150px; height: 150px; display: flex; align-items: flex-end; justify-content: center; }
+.bomba-grande { font-size: 6rem; line-height: 1; filter: drop-shadow(0 0 18px rgba(255,87,34,.5)); transition: transform .2s; }
+.bomba-grande.mia { animation: tembleque .3s ease-in-out infinite; }
+@keyframes tembleque { 0%,100% { transform: rotate(-5deg) scale(1); } 50% { transform: rotate(5deg) scale(1.07); } }
+.mecha { position: absolute; top: 6px; left: 50%; width: 3px; height: 34px; transform: translateX(-50%) rotate(14deg); transform-origin: bottom center; background: linear-gradient(to top, #6b4a2a, #b98a4e); border-radius: 2px; }
+.chispa {
+  position: absolute; top: -6px; left: 50%; width: 14px; height: 14px; transform: translateX(-50%);
+  border-radius: 50%; background: radial-gradient(circle, #fff, var(--accent2) 40%, var(--accent) 70%, transparent 75%);
+  box-shadow: 0 0 12px 4px var(--accent2), 0 0 20px 8px rgba(255,87,34,.6);
+  animation: chispear .28s ease-in-out infinite;
+}
+@keyframes chispear { 0%,100% { transform: translateX(-50%) scale(.8); opacity: .9; } 50% { transform: translateX(-52%) scale(1.25); opacity: 1; } }
+.bomba-wrap.apagada .chispa { display: none; }
+.particula { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: var(--accent2); pointer-events: none; }
+
+.quien-tiene { font-size: 1.15rem; font-weight: 700; text-align: center; }
+.quien-tiene .nombre-hot { color: var(--accent2); }
+.palabra-live { min-height: 30px; font-size: 1.3rem; font-weight: 700; letter-spacing: 1px; color: var(--txt); text-align: center; }
+.palabra-live .cursor { animation: parpadeo .8s step-end infinite; color: var(--accent2); }
+@keyframes parpadeo { 50% { opacity: 0; } }
+.usadas { font-size: .78rem; color: var(--muted); text-align: center; min-height: 18px; margin-top: 2px; padding: 0 10px; }
+
+.turno-mio { border: 2px solid var(--accent2); background: rgba(255,179,0,.08); border-radius: 16px; padding: 16px; margin-top: 8px; animation: reglaIn .3s ease; }
+.turno-mio .aviso { text-align: center; color: var(--accent2); font-weight: 800; margin-bottom: 10px; font-size: 1.05rem; }
+.feedback-mal { color: var(--danger); text-align: center; font-size: .85rem; min-height: 18px; margin-top: 6px; }
+.feedback-mal.flash { animation: negar .4s; }
+@keyframes negar { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+
+.vidas-fila { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 12px; }
+.vida-chip {
+  display: flex; align-items: center; gap: 6px; background: var(--bg2); padding: 6px 12px; border-radius: 20px; font-size: .9rem;
+  transition: box-shadow .25s, background .25s, opacity .25s;
+}
+.vida-chip.hot { background: rgba(255,87,34,.2); box-shadow: 0 0 0 2px var(--accent); animation: pulseHot 1s ease-in-out infinite; }
+@keyframes pulseHot { 0%,100% { box-shadow: 0 0 0 2px var(--accent); } 50% { box-shadow: 0 0 0 4px rgba(255,87,34,.5); } }
+.vida-chip.muerto { opacity: .4; text-decoration: line-through; }
+.vida-chip.off-conn { opacity: .45; }
+.vida-chip .corazones { letter-spacing: 1px; }
+
+/* ---- PODIO / EXPLOSION ---- */
+.explosion-full {
+  position: fixed; inset: 0; display: none; align-items: center; justify-content: center; flex-direction: column;
+  background: radial-gradient(circle, rgba(255,87,34,.4), rgba(13,11,26,.96)); z-index: 50;
+}
+.explosion-full.on { display: flex; animation: flashBoom .2s; }
+@keyframes flashBoom { from { background: rgba(255,255,255,.8); } to { } }
+.explosion-full .boom { font-size: 7rem; animation: boomPop .5s cubic-bezier(.22,1,.36,1); }
+@keyframes boomPop { 0% { transform: scale(0) rotate(-20deg); } 60% { transform: scale(1.35) rotate(8deg); } 100% { transform: scale(1) rotate(0); } }
+.explosion-full .txt { font-size: 1.6rem; font-weight: 900; margin-top: 8px; text-align: center; padding: 0 20px; }
+
+.podio-lista { list-style: none; margin-top: 8px; }
+.podio-item {
+  display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 14px; margin-bottom: 8px; background: var(--bg2);
+  animation: podioIn .4s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes podioIn { from { opacity: 0; transform: translateX(-16px); } to { opacity: 1; transform: none; } }
+.podio-item.p1 { background: linear-gradient(135deg, rgba(255,179,0,.25), var(--bg2)); box-shadow: 0 0 0 2px var(--accent2); }
+.podio-item .pos { font-size: 1.4rem; font-weight: 900; width: 34px; text-align: center; }
+.podio-item .av { font-size: 1.8rem; }
+.podio-item .nom { flex: 1; font-weight: 700; }
+.podio-item .det { color: var(--muted); font-size: .85rem; }
+.premios { margin-top: 16px; }
+.premio-chip {
+  display: flex; align-items: center; gap: 10px; background: var(--card); padding: 12px 14px; border-radius: 12px; margin-bottom: 8px;
+  animation: podioIn .4s cubic-bezier(.22,1,.36,1) both;
+}
+.premio-chip .ic { font-size: 1.5rem; }
+.premio-chip .txt-p b { color: var(--accent2); }
+.premio-chip .txt-p small { color: var(--muted); display: block; font-size: .75rem; }
+
+.confeti { position: fixed; top: -12px; width: 9px; height: 14px; z-index: 60; pointer-events: none; border-radius: 2px; animation: caer linear forwards; }
+@keyframes caer { to { transform: translateY(105vh) rotate(720deg); opacity: .9; } }
+
+.banner {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 45;
+  background: var(--danger); color: #fff; text-align: center; padding: 12px 14px; font-size: .9rem; font-weight: 600;
+  transform: translateY(100%); transition: transform .3s cubic-bezier(.22,1,.36,1);
+}
+.banner.on { transform: translateY(0); }
+.banner.warn { background: var(--accent2); color: #2a1a00; }
+.banner button {
+  margin-left: 10px; background: rgba(0,0,0,.25); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer;
+}
+</style>
+</head>
+<body>
+<button class="mute-btn" id="mute-btn" onclick="AUDIO.toggle()">🔊</button>
+<div id="app">
+
+  <!-- ========== 2. PANTALLAS ========== -->
+
+  <!-- INICIO -->
+  <section id="p-inicio" class="pantalla activa">
+    <h1 class="titulo"><span class="bomba">💣</span> Cadena Explosiva</h1>
+    <p class="sub">La bomba salta de celu en celu. No te quemes.</p>
+
+    <label for="in-nombre">Tu nombre</label>
+    <input id="in-nombre" type="text" maxlength="14" placeholder="Rafa" autocomplete="off">
+
+    <div class="emoji-picker" id="emoji-picker"></div>
+
+    <div id="menu-inicial">
+      <button class="btn btn-primary" onclick="UI.crearSala()">🔥 CREAR SALA</button>
+      <button class="btn btn-secondary" onclick="UI.mostrarUnirse()">🔗 UNIRSE A UNA SALA</button>
+    </div>
+
+    <div id="menu-unirse" style="display:none">
+      <label for="in-codigo" style="margin-top:14px">Código de la sala</label>
+      <input id="in-codigo" type="text" class="codigo-input" maxlength="4" placeholder="KZPT" autocomplete="off">
+      <button class="btn btn-primary" onclick="UI.unirse()">UNIRME</button>
+      <button class="btn btn-ghost" onclick="UI.volverMenu()">← Volver</button>
+    </div>
+
+    <p id="err-inicio" class="error-msg"></p>
+  </section>
+
+  <!-- LOBBY -->
+  <section id="p-lobby" class="pantalla">
+    <h1 class="titulo" style="font-size:1.6rem">🛋️ Sala de espera</h1>
+
+    <div class="codigo-box">
+      <div class="label-cod">Código de sala</div>
+      <div class="valor" id="lobby-codigo">----</div>
+      <button class="copiar" onclick="UI.copiarCodigo(event)">📋 copiar código</button>
+    </div>
+
+    <div class="modo-sel" id="modo-sel">
+      <div class="modo-op" id="modo-clasico" onclick="UI.setModo('clasico')">
+        <div class="mi">💣</div><div class="mt">CLÁSICO</div>
+        <div class="md">La bomba explota al azar en cada mano. Nadie sabe cuándo.</div>
+      </div>
+      <div class="modo-op" id="modo-mecha" onclick="UI.setModo('mecha')">
+        <div class="mi">🕯️</div><div class="mt">MECHA COMPARTIDA</div>
+        <div class="md">Mecha larga oculta, turnos con segundos visibles que se achican.</div>
+      </div>
+    </div>
+    <p class="modo-lbl-invitado" id="modo-lbl" style="display:none"></p>
+
+    <div class="card">
+      <ul class="jugadores" id="lista-jugadores"></ul>
+      <p class="contador" id="contador-jug"></p>
+    </div>
+
+    <div id="estado-conn" class="estado-conn"></div>
+
+    <div style="margin-top:auto">
+      <button id="btn-empezar" class="btn btn-ok" style="display:none" onclick="UI.empezar()">🚀 EMPEZAR</button>
+      <p id="espera-host" class="contador" style="display:none">Esperando a que el anfitrión arranque…</p>
+      <button class="btn btn-ghost" onclick="UI.salir()">Salir de la sala</button>
+    </div>
+  </section>
+
+  <!-- JUEGO -->
+  <section id="p-juego" class="pantalla">
+    <p class="ronda-lbl" id="ronda-lbl">Ronda 1</p>
+    <div class="regla-box" id="regla-box">
+      <div class="label-r" id="regla-label">Regla de la ronda</div>
+      <div class="regla" id="regla-txt">—</div>
+      <div id="badge-especial"></div>
+    </div>
+
+    <div class="bomba-zona">
+      <div class="bomba-wrap" id="bomba-wrap">
+        <div class="bomba-grande" id="bomba-emoji">💣</div>
+        <div class="mecha"><div class="chispa"></div></div>
+      </div>
+      <div class="quien-tiene" id="quien-tiene"></div>
+      <div class="turno-count" id="turno-count"></div>
+      <div class="palabra-live" id="palabra-live"></div>
+      <div class="usadas" id="usadas"></div>
+    </div>
+
+    <div id="turno-mio" class="turno-mio" style="display:none">
+      <div class="aviso">🔥 ¡La tenés vos! Escribí una palabra</div>
+      <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off">
+      <button class="btn btn-primary" id="btn-pasar" onclick="UI.enviarPalabra()">PASAR LA BOMBA →</button>
+      <p class="feedback-mal" id="feedback-mal"></p>
+    </div>
+
+    <div class="vidas-fila" id="vidas-fila"></div>
+  </section>
+
+  <!-- PODIO -->
+  <section id="p-podio" class="pantalla">
+    <h1 class="titulo" style="font-size:1.8rem">🏆 Podio</h1>
+    <ul class="podio-lista" id="podio-lista"></ul>
+    <div class="premios" id="premios"></div>
+    <div style="margin-top:auto">
+      <button id="btn-revancha" class="btn btn-ok" style="display:none" onclick="UI.revancha()">🔁 REVANCHA</button>
+      <button class="btn btn-ghost" onclick="UI.salir()">Salir</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="explosion" class="explosion-full">
+  <div class="boom">💥</div>
+  <div class="txt" id="explosion-txt"></div>
+</div>
+
+<div id="banner" class="banner"><span id="banner-txt"></span><span id="banner-accion"></span></div>
+
+<!-- Háptica iOS: togglear un switch dispara el Taptic Engine (iOS 17.4-26.4; Apple lo parcheó en 26.5+). Mejora progresiva: si no funciona, no pasa nada. -->
+<div aria-hidden="true" style="position:fixed;top:-100px;left:-100px;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none">
+  <input type="checkbox" switch id="haptic-sw" tabindex="-1">
+  <label for="haptic-sw" id="haptic-lbl"></label>
+</div>
+
+<script>
+/* ========== 3. CONFIG & CONSTANTES ========== */
+const CFG = {
+  PREFIJO: "cadena-explosiva-",
+  LETRAS: "ABCDEFGHJKLMNPQRSTUVWXYZ",
+  MIN_JUG: 2,
+  MAX_JUG: 8,
+  VIDAS_INI: 3,
+  EMOJIS: ["🦊","🐸","🐙","🦄","🐲","🦖","🐧","🐨","🦁","🐵","🦉","🐢"],
+  BOMBA_MIN_MS: 7000,
+  BOMBA_MAX_MS: 20000,
+  PROB_ESPECIAL: 0.18,
+  HEARTBEAT_MS: 3000,
+  TIMEOUT_MS: 10000,
+  PAUSA_EXPLOSION_MS: 1800,
+  /* modo mecha compartida */
+  M_VUELTAS_MIN: 3, M_VUELTAS_MAX: 5,       /* vueltas objetivo (al azar, oculto) */
+  M_PASADA_PROM_MS: 5000,                    /* tiempo promedio estimado por pasada */
+  M_TURNO_MIN_MS: 5000, M_TURNO_MAX_MS: 10000,
+  M_TURNO_PISO_MS: 3000,
+  M_PENA_VENCIDO: [10000, 25000],            /* turno vencido: descuenta a la mecha */
+  M_PENA_INVALIDA: [5000, 15000],            /* palabra inválida: descuenta */
+  M_BONO_LARGA: [1000, 4000],                /* palabra 8+ letras: suma (menos que el tiempo de pensar: la mecha siempre avanza) */
+  M_DERIVA: 5000,                            /* deriva oculta ±0-5s por pasada */
+  M_TICK_MS: 250
+};
+
+const POOL_LETRAS = "ABCDEFGHILMNOPRSTU".split("");
+
+function mutadores() {
+  const L = () => POOL_LETRAS[Math.floor(Math.random() * POOL_LETRAS.length)];
+  const l1 = L(), l2 = L(), l3 = L(), l4 = L();
+  return [
+    { texto: `Palabra que empiece con "${l1}"`, tipo: "empieza", param: l1 },
+    { texto: `Palabra que termine con "${l2}"`, tipo: "termina", param: l2 },
+    { texto: `Prohibida la letra "${l3}"`, tipo: "prohibida", param: l3 },
+    { texto: `Que contenga la letra "${l4}"`, tipo: "contiene", param: l4 },
+    { texto: "Palabra de al menos 7 letras", tipo: "largoMin", param: 7 },
+    { texto: "Palabra de al menos 9 letras", tipo: "largoMin", param: 9 },
+    { texto: "Palabra corta: máximo 4 letras", tipo: "largoMax", param: 4 },
+    { texto: "Palabra de exactamente 5 letras", tipo: "largoExacto", param: 5 },
+    { texto: "Empezá con la última letra de la palabra anterior", tipo: "encadena" },
+    { texto: "Algo que haya en la cocina", tipo: "libre" },
+    { texto: "Un animal", tipo: "libre" },
+    { texto: "Una comida", tipo: "libre" },
+    { texto: "Un país o ciudad", tipo: "libre" },
+    { texto: "Un nombre propio", tipo: "libre" },
+    { texto: "Algo de color rojo", tipo: "libre" },
+    { texto: "Una parte del cuerpo", tipo: "libre" },
+    { texto: "Una marca conocida", tipo: "libre" },
+    { texto: "Un objeto que tengas cerca ahora", tipo: "libre" },
+    { texto: "Algo que se pueda tomar", tipo: "libre" },
+    { texto: "Un deporte", tipo: "libre" },
+    { texto: "Una profesión", tipo: "libre" },
+    { texto: "Un instrumento musical", tipo: "libre" },
+    { texto: "Algo que vuele", tipo: "libre" },
+    { texto: "Una palabra que rime con \"amor\"", tipo: "libre" },
+    { texto: "Un personaje de peli o serie", tipo: "libre" },
+    { texto: "Algo que encuentres en la playa", tipo: "libre" },
+    { texto: "Una fruta o verdura", tipo: "libre" }
+  ];
+}
+
+const ESPECIALES = [
+  { texto: "🔥 MECHA CORTA: la bomba explota MUCHO más rápido", tipo: "libre", flag: "mechaCorta" },
+  { texto: "⚡ DOBLE O NADA: si explota, perdés 2 vidas", tipo: "libre", flag: "dobleDanio" },
+  { texto: "🎯 RONDA LARGA: solo valen palabras de 8+ letras", tipo: "largoMin", param: 8, flag: "" },
+  { texto: "🔗 CADENA PURA: encadenás con la última letra, sin repetir", tipo: "encadena", flag: "" }
+];
+
+const LOCAL = { soyHost: false, miId: null, nombre: "", emoji: CFG.EMOJIS[0], codigo: null };
+
+/* ========== 4. RED (PeerJS: host, invitado, mensajes, heartbeat) ========== */
+const NET = {
+  peer: null, conns: [], hostConn: null,
+  heartbeatTimer: null, watchdogTimer: null, ultimoDelHost: 0,
+
+  generarCodigo() {
+    let c = "";
+    for (let i = 0; i < 4; i++) c += CFG.LETRAS[Math.floor(Math.random() * CFG.LETRAS.length)];
+    return c;
+  },
+  peerIdDe(codigo) { return CFG.PREFIJO + codigo; },
+
+  crearSala() {
+    LOCAL.soyHost = true;
+    LOCAL.codigo = this.generarCodigo();
+    const id = this.peerIdDe(LOCAL.codigo);
+    LOCAL.miId = id;
+    this.peer = new Peer(id, { debug: 1 });
+    this.peer.on("open", () => {
+      GAME.state.jugadores.push({ id, nombre: LOCAL.nombre, emoji: LOCAL.emoji, vidas: CFG.VIDAS_INI, conectado: true });
+      UI.irLobby(); UI.render();
+    });
+    this.peer.on("connection", (conn) => this.onInvitadoConecta(conn));
+    this.peer.on("disconnected", () => { try { this.peer.reconnect(); } catch (e) {} });
+    this.peer.on("error", (err) => {
+      if (err.type === "unavailable-id") { try { this.peer.destroy(); } catch (e) {} this.crearSala(); }
+      else if (err.type === "network" || err.type === "server-error") { UI.banner("Problema de red del servidor. Reintentá.", null, true); }
+      else { console.error(err); }
+    });
+  },
+
+  onInvitadoConecta(conn) {
+    conn.on("data", (msg) => this.hostRecibe(conn, msg));
+    conn.on("close", () => this.invitadoSeFue(conn));
+    conn.on("error", () => this.invitadoSeFue(conn));
+  },
+
+  invitadoSeFue(conn) {
+    const j = GAME.state.jugadores.find(x => x.id === conn.peer);
+    if (j) j.conectado = false;
+    this.conns = this.conns.filter(c => c !== conn);
+    if (GAME.state.fase === "jugando" && GAME.state.bombaEn === conn.peer && !GAME.enPausa) {
+      GAME.limpiarTimer();
+      const sig = GAME.siguienteVivo(conn.peer);
+      if (sig) { GAME.state.reglaActual = GAME.nuevaRegla(); GAME.pasarBombaA(sig); }
+      else GAME.chequearFin();
+    }
+    this.broadcastState(); UI.render();
+  },
+
+  hostRecibe(conn, msg) {
+    if (msg.t === "ping") { try { conn.send({ t: "pong" }); } catch (e) {} return; }
+    if (msg.t === "join") {
+      if (GAME.state.jugadores.filter(j => j.conectado).length >= CFG.MAX_JUG) {
+        conn.send({ t: "rechazado", motivo: "Sala llena (máx " + CFG.MAX_JUG + ")." });
+        setTimeout(() => { try { conn.close(); } catch (e) {} }, 300); return;
+      }
+      if (GAME.state.fase !== "lobby") {
+        const yaEstaba = GAME.state.jugadores.find(x => x.id === conn.peer);
+        if (!yaEstaba) {
+          conn.send({ t: "rechazado", motivo: "La partida ya arrancó. Esperá la próxima." });
+          setTimeout(() => { try { conn.close(); } catch (e) {} }, 300); return;
+        }
+      }
+      if (!this.conns.includes(conn)) this.conns.push(conn);
+      const ex = GAME.state.jugadores.find(x => x.id === conn.peer);
+      if (ex) { ex.conectado = true; ex.nombre = msg.nombre; ex.emoji = msg.emoji; }
+      else GAME.state.jugadores.push({ id: conn.peer, nombre: msg.nombre, emoji: msg.emoji, vidas: CFG.VIDAS_INI, conectado: true });
+      this.broadcastState(); UI.render();
+    }
+    else if (msg.t === "input") {
+      if (GAME.state.fase !== "jugando") return;
+      if (msg.data.kind === "tipeando" && GAME.state.bombaEn === conn.peer) {
+        GAME.state.palabraActual = String(msg.data.texto || "").slice(0, 40);
+        this.broadcastState(); UI.render();
+      }
+      else if (msg.data.kind === "pasar" && GAME.state.bombaEn === conn.peer) {
+        GAME.intentarPasar(conn.peer, msg.data.texto, msg.data.nonce);
+      }
+    }
+  },
+
+  broadcastState() {
+    const paquete = { t: "state", full: GAME.state };
+    this.conns.forEach(c => { try { if (c.open) c.send(paquete); } catch (e) {} });
+  },
+  broadcastEvent(kind, data) {
+    const paquete = { t: "event", kind, data };
+    this.conns.forEach(c => { try { if (c.open) c.send(paquete); } catch (e) {} });
+  },
+
+  unirse(codigo) {
+    LOCAL.soyHost = false; LOCAL.codigo = codigo;
+    this.peer = new Peer({ debug: 1 });
+    this.peer.on("open", (miPeerId) => { LOCAL.miId = miPeerId; this.conectarAlHost(codigo); });
+    this.peer.on("disconnected", () => { try { this.peer.reconnect(); } catch (e) {} });
+    this.peer.on("error", (err) => {
+      if (err.type === "peer-unavailable") UI.volverInicioConError("No existe una sala con ese código.");
+      else if (err.type === "network" || err.type === "server-error") UI.volverInicioConError("Problema de red. Reintentá.");
+      else console.error(err);
+    });
+  },
+
+  conectarAlHost(codigo) {
+    const conn = this.peer.connect(this.peerIdDe(codigo), { reliable: true });
+    this.hostConn = conn;
+    let conectado = false;
+    conn.on("open", () => {
+      conectado = true;
+      this.ultimoDelHost = Date.now();
+      conn.send({ t: "join", nombre: LOCAL.nombre, emoji: LOCAL.emoji });
+      UI.irLobby();
+      this.iniciarHeartbeat();
+      UI.ocultarBanner();
+    });
+    conn.on("data", (msg) => { this.ultimoDelHost = Date.now(); this.invitadoRecibe(msg); });
+    conn.on("close", () => this.hostSeCayo());
+    conn.on("error", () => this.hostSeCayo());
+    setTimeout(() => {
+      if (!conectado) {
+        UI.volverInicioConError("No encontré esa sala. ¿Código correcto y sala activa?");
+        try { conn.close(); } catch (e) {} try { this.peer.destroy(); } catch (e) {}
+      }
+    }, 8000);
+  },
+
+  iniciarHeartbeat() {
+    this.pararHeartbeat();
+    this.heartbeatTimer = setInterval(() => {
+      try { if (this.hostConn && this.hostConn.open) this.hostConn.send({ t: "ping" }); } catch (e) {}
+    }, CFG.HEARTBEAT_MS);
+    this.watchdogTimer = setInterval(() => {
+      if (Date.now() - this.ultimoDelHost > CFG.TIMEOUT_MS) this.hostSeCayo();
+    }, 2000);
+  },
+  pararHeartbeat() {
+    if (this.heartbeatTimer) { clearInterval(this.heartbeatTimer); this.heartbeatTimer = null; }
+    if (this.watchdogTimer) { clearInterval(this.watchdogTimer); this.watchdogTimer = null; }
+  },
+
+  hostSeCayo() {
+    if (LOCAL.soyHost) return;
+    this.pararHeartbeat();
+    UI.banner("⚠️ Se cayó el anfitrión. La sala no existe más.", { txt: "Reintentar", fn: () => NET.reintentarConexion() });
+  },
+
+  reintentarConexion() {
+    if (!LOCAL.codigo) { UI.salir(); return; }
+    UI.banner("Reconectando…", null, true);
+    this.ultimoDelHost = Date.now();
+    try { if (this.hostConn) this.hostConn.close(); } catch (e) {}
+    this.conectarAlHost(LOCAL.codigo);
+  },
+
+  invitadoRecibe(msg) {
+    if (msg.t === "pong") return;
+    if (msg.t === "state") {
+      const faseAnterior = GAME.state.fase;
+      const bombaAntes = GAME.state.bombaEn;
+      GAME.state = msg.full;
+      UI.render();
+      if (GAME.state.fase === "jugando" && faseAnterior !== "jugando") UI.irJuego();
+      if (GAME.state.fase === "podio" && faseAnterior !== "podio") UI.irPodio();
+      if (GAME.state.fase === "lobby" && faseAnterior !== "lobby") UI.irLobby();
+      if (GAME.state.fase === "jugando" && GAME.state.bombaEn === LOCAL.miId && bombaAntes !== LOCAL.miId) {
+        AUDIO.tick(); UI.vibrar([60]);
+      }
+    }
+    else if (msg.t === "rechazado") UI.volverInicioConError(msg.motivo);
+    else if (msg.t === "event") {
+      if (msg.kind === "explosion") UI.mostrarExplosion(msg.data);
+      if (msg.kind === "invalida" && msg.data.id === LOCAL.miId) {
+        UI.feedbackMal(msg.data.motivo); AUDIO.error();
+        const inp = document.getElementById("in-palabra");
+        if (inp && !inp.value && UI.ultimaEnviada) { inp.value = UI.ultimaEnviada; try { inp.focus(); } catch (e) {} }
+      }
+      if (msg.kind === "paso" && msg.data.id !== LOCAL.miId) AUDIO.pop();
+      if (msg.kind === "turnoVencido" && msg.data.id === LOCAL.miId) UI.avisoTurnoVencido();
+    }
+  },
+
+  enviarInput(data) {
+    if (LOCAL.soyHost) return;
+    try { if (this.hostConn && this.hostConn.open) this.hostConn.send({ t: "input", data }); } catch (e) {}
+  }
+};
+
+/* ========== 5. MOTOR DE JUEGO (funciones puras, solo host) ========== */
+const GAME = {
+  state: {
+    fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false,
+    palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {},
+    modo: "clasico", turnoSeg: null, mechaFrac: null
+  },
+  bombaTimer: null,
+  ultimoNonce: {},
+  enPausa: false,   // FIX QA: true durante la pausa post-explosión (nadie tiene la bomba)
+  /* --- modo mecha compartida (solo host) --- */
+  mechaTotal: 0, mechaRestante: 0, turnoRestante: 0, mechaInterval: null,
+
+  vivos() { return this.state.jugadores.filter(j => j.vidas > 0 && j.conectado); },
+  siguienteVivo(desdeId) {
+    const js = this.state.jugadores;
+    const idx = js.findIndex(j => j.id === desdeId);
+    if (idx < 0) return this.vivos()[0] ? this.vivos()[0].id : null;
+    for (let i = 1; i <= js.length; i++) {
+      const cand = js[(idx + i) % js.length];
+      if (cand.vidas > 0 && cand.conectado) return cand.id;
+    }
+    return null;
+  },
+  statDe(id) {
+    if (!this.state.stats[id]) this.state.stats[id] = { quemado: 0, pasadas: 0, masLargo: 0 };
+    return this.state.stats[id];
+  },
+  nuevaRegla() {
+    const especial = Math.random() < CFG.PROB_ESPECIAL;
+    let regla;
+    if (especial) { regla = { ...ESPECIALES[Math.floor(Math.random() * ESPECIALES.length)] }; this.state.esEspecial = true; }
+    else { const pool = mutadores(); regla = pool[Math.floor(Math.random() * pool.length)]; this.state.esEspecial = false; }
+    this.state.usadas = []; this.state.ultimaPalabra = "";
+    return regla;
+  },
+  empezar() {
+    if (!LOCAL.soyHost) return;
+    const activos = this.state.jugadores.filter(j => j.conectado);
+    if (activos.length < CFG.MIN_JUG) return;
+    this.state.jugadores.forEach(j => j.vidas = CFG.VIDAS_INI);
+    this.state.fase = "jugando"; this.state.ronda = 1; this.state.stats = {};
+    this.state.turnoSeg = null; this.state.mechaFrac = null;
+    this.ultimoNonce = {}; this.enPausa = false;
+    this.state.reglaActual = this.nuevaRegla();
+    if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
+    this.pasarBombaA(this.vivos()[0].id);
+    NET.broadcastState(); UI.irJuego();
+  },
+  pasarBombaA(id) {
+    if (id == null) { this.chequearFin(); return; }
+    this.enPausa = false;
+    this.state.bombaEn = id; this.state.palabraActual = "";
+    if (this.state.modo === "mecha") { this.limpiarTimer(); this.nuevoTurno(); if (!this.mechaInterval) this.arrancarTick(); }
+    else this.armarTimer();
+    NET.broadcastState(); UI.render();
+    if (id === LOCAL.miId) { AUDIO.tick(); UI.vibrar([60]); }
+  },
+  /* ===== MODO MECHA COMPARTIDA ===== */
+  rango(par) { return par[0] + Math.random() * (par[1] - par[0]); },
+  iniciarMecha() {
+    const vivos = this.vivos().length || 2;
+    const vueltas = CFG.M_VUELTAS_MIN + Math.random() * (CFG.M_VUELTAS_MAX - CFG.M_VUELTAS_MIN);
+    this.mechaTotal = vivos * vueltas * CFG.M_PASADA_PROM_MS;
+    this.mechaRestante = this.mechaTotal;
+  },
+  mechaFrac() { return this.mechaTotal > 0 ? Math.max(0, this.mechaRestante / this.mechaTotal) : 0; },
+  calcTurno(factor) {
+    const frac = this.mechaFrac();
+    let ms = (CFG.M_TURNO_MIN_MS + Math.random() * (CFG.M_TURNO_MAX_MS - CFG.M_TURNO_MIN_MS)) * (0.4 + 0.6 * frac);
+    if (factor) ms *= factor;
+    return Math.max(CFG.M_TURNO_PISO_MS, ms);
+  },
+  nuevoTurno(factor) {
+    this.turnoRestante = this.calcTurno(factor);
+    this.state.turnoSeg = Math.ceil(this.turnoRestante / 1000);
+    this.publicarFrac();
+  },
+  publicarFrac() {
+    // fracción con ruido: sirve para el visual pero no delata el tiempo real
+    const f = this.mechaFrac() + (Math.random() * 0.12 - 0.06);
+    this.state.mechaFrac = Math.max(0, Math.min(1, f));
+  },
+  ajustarMecha(deltaMs) {
+    // tope: los bonos nunca pueden estirar la mecha más allá de su total inicial
+    this.mechaRestante = Math.min(this.mechaTotal, Math.max(0, this.mechaRestante + deltaMs));
+  },
+  arrancarTick() {
+    this.pararTick();
+    this.mechaInterval = setInterval(() => this.tickMecha(), CFG.M_TICK_MS);
+  },
+  pararTick() { if (this.mechaInterval) { clearInterval(this.mechaInterval); this.mechaInterval = null; } },
+  tickMecha() {
+    if (this.state.fase !== "jugando" || this.enPausa || this.state.modo !== "mecha") return;
+    this.mechaRestante -= CFG.M_TICK_MS;
+    this.turnoRestante -= CFG.M_TICK_MS;
+    if (this.mechaRestante <= 0) { this.explota(); return; }
+    if (this.turnoRestante <= 0) {
+      // turno vencido: no explota, pero la mecha se acorta fuerte y te queda un turno más corto
+      this.ajustarMecha(-this.rango(CFG.M_PENA_VENCIDO));
+      if (this.mechaRestante <= 0) { this.explota(); return; }
+      NET.broadcastEvent("turnoVencido", { id: this.state.bombaEn });
+      if (this.state.bombaEn === LOCAL.miId) UI.avisoTurnoVencido();
+      this.nuevoTurno(0.7);
+      NET.broadcastState(); UI.render();
+      return;
+    }
+    const s = Math.ceil(this.turnoRestante / 1000);
+    if (s !== this.state.turnoSeg) {
+      this.state.turnoSeg = s;
+      this.publicarFrac();
+      NET.broadcastState(); UI.render();
+      if (this.state.bombaEn === LOCAL.miId && s <= 3) AUDIO.tick();
+    }
+  },
+
+  armarTimer() {
+    this.limpiarTimer();
+    let min = CFG.BOMBA_MIN_MS, max = CFG.BOMBA_MAX_MS;
+    if (this.state.reglaActual && this.state.reglaActual.flag === "mechaCorta") { min = 3500; max = 8000; }
+    const ms = min + Math.random() * (max - min);
+    this.bombaTimer = setTimeout(() => this.explota(), ms);
+  },
+  limpiarTimer() {
+    if (this.bombaTimer) { clearTimeout(this.bombaTimer); this.bombaTimer = null; }
+    this.pararTick();
+  },
+
+  validar(texto, regla) {
+    const t = (texto || "").trim().toLowerCase();
+    if (t.length < 2) return { ok: false, motivo: "Muy corta." };
+    if (t.length > 40) return { ok: false, motivo: "Demasiado larga." };
+    if (this.state.usadas.includes(t)) return { ok: false, motivo: "Esa ya la dijeron." };
+    if (!regla) return { ok: true };
+    switch (regla.tipo) {
+      case "empieza":     return t[0] === regla.param.toLowerCase() ? { ok: true } : { ok: false, motivo: `Tiene que empezar con "${regla.param}".` };
+      case "termina":     return t[t.length - 1] === regla.param.toLowerCase() ? { ok: true } : { ok: false, motivo: `Tiene que terminar con "${regla.param}".` };
+      case "prohibida":   return !t.includes(regla.param.toLowerCase()) ? { ok: true } : { ok: false, motivo: `Tiene la letra prohibida "${regla.param}".` };
+      case "contiene":    return t.includes(regla.param.toLowerCase()) ? { ok: true } : { ok: false, motivo: `Tiene que contener "${regla.param}".` };
+      case "largoMin":    return t.length >= regla.param ? { ok: true } : { ok: false, motivo: `Mínimo ${regla.param} letras.` };
+      case "largoMax":    return t.length <= regla.param ? { ok: true } : { ok: false, motivo: `Máximo ${regla.param} letras.` };
+      case "largoExacto": return t.length === regla.param ? { ok: true } : { ok: false, motivo: `Justo ${regla.param} letras.` };
+      case "encadena":
+        if (this.state.ultimaPalabra) {
+          const ini = this.state.ultimaPalabra[this.state.ultimaPalabra.length - 1];
+          return t[0] === ini ? { ok: true } : { ok: false, motivo: `Tiene que empezar con "${ini.toUpperCase()}".` };
+        }
+        return { ok: true };
+      default: return { ok: true };
+    }
+  },
+
+  intentarPasar(deId, texto, nonce) {
+    // FIX QA: durante la pausa post-explosión nadie tiene la bomba
+    if (this.enPausa) return;
+    if (this.state.bombaEn !== deId) return;
+    if (nonce != null && this.ultimoNonce[deId] === nonce) return;
+    if (nonce != null) this.ultimoNonce[deId] = nonce;
+
+    const res = this.validar(texto, this.state.reglaActual);
+    if (!res.ok) {
+      if (this.state.modo === "mecha") this.ajustarMecha(-this.rango(CFG.M_PENA_INVALIDA));
+      this.state.palabraActual = "";
+      NET.broadcastEvent("invalida", { id: deId, motivo: res.motivo });
+      if (deId === LOCAL.miId) {
+        UI.feedbackMal(res.motivo); AUDIO.error();
+        const inp = document.getElementById("in-palabra");
+        if (inp && !inp.value && UI.ultimaEnviada) { inp.value = UI.ultimaEnviada; try { inp.focus(); } catch (e) {} }
+      }
+      NET.broadcastState(); UI.render();
+      return;
+    }
+    const limpia = texto.trim().toLowerCase();
+    this.state.usadas.push(limpia);
+    this.state.ultimaPalabra = limpia;
+    const s = this.statDe(deId);
+    s.pasadas++; s.masLargo = Math.max(s.masLargo, limpia.length);
+    if (this.state.modo === "mecha") {
+      if (limpia.length >= 8) this.ajustarMecha(this.rango(CFG.M_BONO_LARGA));
+      this.ajustarMecha((Math.random() * 2 - 1) * CFG.M_DERIVA);  // deriva oculta ±0-5s
+    }
+    NET.broadcastEvent("paso", { id: deId });
+    if (deId === LOCAL.miId) AUDIO.pop();
+    const sig = this.siguienteVivo(deId);
+    if (!this.state.esEspecial) this.state.reglaActual = this.nuevaRegla();
+    this.state.ronda++;
+    this.pasarBombaA(sig);
+  },
+
+  explota() {
+    this.limpiarTimer();
+    this.state.turnoSeg = null;
+    const perdedorId = this.state.bombaEn;
+    const j = this.state.jugadores.find(x => x.id === perdedorId);
+    if (!j) return;
+    const danio = (this.state.reglaActual && this.state.reglaActual.flag === "dobleDanio") ? 2 : 1;
+    j.vidas = Math.max(0, j.vidas - danio);
+    this.statDe(perdedorId).quemado++;
+    // FIX QA: entramos en pausa y sacamos la bomba de las manos → no se puede pasar durante los 1.8s
+    this.enPausa = true;
+    this.state.bombaEn = null;
+    this.state.palabraActual = "";
+    NET.broadcastEvent("explosion", { perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
+    UI.mostrarExplosion({ perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
+    NET.broadcastState(); UI.render();
+    setTimeout(() => {
+      this.enPausa = false;
+      if (this.chequearFin()) return;
+      const sig = this.siguienteVivo(perdedorId) || (j.vidas > 0 ? perdedorId : (this.vivos()[0] && this.vivos()[0].id));
+      this.state.reglaActual = this.nuevaRegla();
+      if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
+      this.pasarBombaA(sig);
+    }, CFG.PAUSA_EXPLOSION_MS);
+  },
+
+  chequearFin() {
+    if (this.vivos().length <= 1) {
+      this.limpiarTimer();
+      this.enPausa = false;
+      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null;
+      NET.broadcastState(); UI.irPodio();
+      return true;
+    }
+    return false;
+  },
+
+  revancha() {
+    if (!LOCAL.soyHost) return;
+    this.state.fase = "lobby"; this.state.bombaEn = null;
+    NET.broadcastState();
+    this.empezar();
+  }
+};
+
+/* ========== 6. UI (render desde el estado) ========== */
+const UI = {
+  mostrar(id) {
+    document.querySelectorAll(".pantalla").forEach(p => p.classList.remove("activa"));
+    document.getElementById(id).classList.add("activa");
+  },
+  irLobby() { this.mostrar("p-lobby"); this.render(); },
+  irJuego() { this.mostrar("p-juego"); this.render(); },
+  irPodio() { this.mostrar("p-podio"); this.render(); this.lluviaConfeti(); },
+
+  initEmojis() {
+    const cont = document.getElementById("emoji-picker");
+    cont.innerHTML = "";
+    CFG.EMOJIS.forEach(e => {
+      const el = document.createElement("div");
+      el.className = "emoji-op" + (e === LOCAL.emoji ? " sel" : "");
+      el.textContent = e;
+      el.onclick = () => { LOCAL.emoji = e; this.initEmojis(); };
+      cont.appendChild(el);
+    });
+  },
+
+  setModo(m) {
+    if (!LOCAL.soyHost || GAME.state.fase !== "lobby") return;
+    GAME.state.modo = m;
+    NET.broadcastState(); this.render();
+  },
+  avisoTurnoVencido() { this.feedbackMal("\u23F1\uFE0F \u00a1Turno vencido! La mecha se acort\u00f3\u2026"); AUDIO.error(); this.vibrar([80, 40, 80]); },
+
+  leerNombre() { return document.getElementById("in-nombre").value.trim().slice(0, 14); },
+  crearSala() {
+    const n = this.leerNombre();
+    if (!n) { this.errorInicio("Escribí tu nombre primero."); return; }
+    AUDIO.desbloquear();
+    LOCAL.nombre = n; this.errorInicio(""); NET.crearSala();
+  },
+  mostrarUnirse() {
+    document.getElementById("menu-inicial").style.display = "none";
+    document.getElementById("menu-unirse").style.display = "block";
+    document.getElementById("in-codigo").focus();
+  },
+  volverMenu() {
+    document.getElementById("menu-inicial").style.display = "block";
+    document.getElementById("menu-unirse").style.display = "none";
+    this.errorInicio("");
+  },
+  unirse() {
+    const n = this.leerNombre();
+    if (!n) { this.errorInicio("Escribí tu nombre primero."); return; }
+    const cod = document.getElementById("in-codigo").value.trim().toUpperCase();
+    if (cod.length !== 4) { this.errorInicio("El código son 4 letras."); return; }
+    AUDIO.desbloquear();
+    LOCAL.nombre = n; this.errorInicio("");
+    document.getElementById("in-codigo").value = cod;
+    NET.unirse(cod); this.irLobby();
+    document.getElementById("estado-conn").innerHTML = '<span class="spinner"></span> Conectando…';
+  },
+  errorInicio(txt) { document.getElementById("err-inicio").textContent = txt; },
+  feedbackMal(txt) {
+    const el = document.getElementById("feedback-mal");
+    if (el) {
+      el.textContent = "❌ " + txt;
+      el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash");
+      this.vibrar([40, 40, 40]);
+      setTimeout(() => { if (el.textContent.includes(txt)) el.textContent = ""; }, 2500);
+    }
+  },
+
+  banner(txt, accion, warn) {
+    const b = document.getElementById("banner");
+    document.getElementById("banner-txt").textContent = txt;
+    const acc = document.getElementById("banner-accion");
+    acc.innerHTML = "";
+    if (accion) {
+      const btn = document.createElement("button");
+      btn.textContent = accion.txt;
+      btn.onclick = accion.fn;
+      acc.appendChild(btn);
+    }
+    b.classList.toggle("warn", !!warn);
+    b.classList.add("on");
+  },
+  ocultarBanner() { document.getElementById("banner").classList.remove("on"); },
+
+  render() {
+    const st = GAME.state;
+    if (LOCAL.codigo) { const lc = document.getElementById("lobby-codigo"); if (lc) lc.textContent = LOCAL.codigo; }
+
+    const ul = document.getElementById("lista-jugadores");
+    if (ul) {
+      ul.innerHTML = "";
+      (st.jugadores || []).forEach((j, i) => {
+        const li = document.createElement("li");
+        li.className = "jug";
+        const soyYo = j.id === LOCAL.miId;
+        li.innerHTML = `
+          <span class="av">${j.emoji}</span>
+          <span class="nom">${this.escape(j.nombre)}${soyYo ? " (vos)" : ""}</span>
+          ${i === 0 ? '<span class="tag host">HOST</span>' : ''}
+          <span class="dot ${j.conectado ? '' : 'off'}"></span>`;
+        ul.appendChild(li);
+      });
+      const activos = st.jugadores.filter(j => j.conectado).length;
+      document.getElementById("contador-jug").textContent =
+        `${activos}/${CFG.MAX_JUG} jugadores · mínimo ${CFG.MIN_JUG} para arrancar`;
+      const btn = document.getElementById("btn-empezar");
+      const espera = document.getElementById("espera-host");
+      if (LOCAL.soyHost) {
+        btn.style.display = "block"; espera.style.display = "none";
+        btn.disabled = activos < CFG.MIN_JUG;
+        btn.textContent = activos < CFG.MIN_JUG ? `🚀 EMPEZAR (faltan ${CFG.MIN_JUG - activos})` : "🚀 EMPEZAR";
+      } else { btn.style.display = "none"; espera.style.display = "block"; }
+      const est = document.getElementById("estado-conn");
+      if (est.innerHTML.includes("Conectando")) est.innerHTML = "";
+
+      // selector de modo
+      const sel = document.getElementById("modo-sel");
+      const lbl = document.getElementById("modo-lbl");
+      if (sel && lbl) {
+        const oc = document.getElementById("modo-clasico"), om = document.getElementById("modo-mecha");
+        oc.classList.toggle("sel", st.modo !== "mecha");
+        om.classList.toggle("sel", st.modo === "mecha");
+        if (LOCAL.soyHost) {
+          sel.style.display = "flex"; lbl.style.display = "none";
+          oc.classList.remove("bloqueado"); om.classList.remove("bloqueado");
+        } else {
+          sel.style.display = "flex"; lbl.style.display = "block";
+          oc.classList.add("bloqueado"); om.classList.add("bloqueado");
+          lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + (st.modo === "mecha" ? "\u{1F56F}\uFE0F Mecha Compartida" : "\u{1F4A3} Cl\u00e1sico");
+        }
+      }
+    }
+
+    if (st.fase === "jugando") {
+      document.getElementById("ronda-lbl").textContent = "Ronda " + st.ronda;
+      const box = document.getElementById("regla-box");
+      box.classList.toggle("especial", !!st.esEspecial);
+      document.getElementById("regla-label").textContent = st.esEspecial ? "Ronda especial" : "Regla de la ronda";
+      document.getElementById("regla-txt").textContent = st.reglaActual ? st.reglaActual.texto : "—";
+      document.getElementById("badge-especial").innerHTML = st.esEspecial ? '<span class="badge-especial">✦ ESPECIAL ✦</span>' : "";
+
+      const hot = st.jugadores.find(j => j.id === st.bombaEn);
+      const laTengoYo = st.bombaEn === LOCAL.miId;
+      document.getElementById("bomba-emoji").classList.toggle("mia", laTengoYo);
+      // mecha apagada cuando nadie tiene la bomba (pausa post-explosión)
+      document.getElementById("bomba-wrap").classList.toggle("apagada", !st.bombaEn);
+      document.getElementById("app").classList.toggle("hot-bg", laTengoYo);
+      document.getElementById("quien-tiene").innerHTML = laTengoYo
+        ? '<span class="nombre-hot">¡La tenés vos! 🔥</span>'
+        : (hot ? `La tiene <span class="nombre-hot">${hot.emoji} ${this.escape(hot.nombre)}</span>` : "");
+
+      // contador visible (solo modo mecha)
+      const tc = document.getElementById("turno-count");
+      if (tc) {
+        if (st.modo === "mecha" && st.turnoSeg != null && st.bombaEn) {
+          tc.textContent = "\u23F1\uFE0F " + st.turnoSeg + "s";
+          tc.className = "turno-count " + (st.turnoSeg <= 3 ? "critico" : st.turnoSeg <= 5 ? "medio" : "ok");
+        } else { tc.textContent = ""; tc.className = "turno-count"; }
+      }
+      // bomba cada vez más nerviosa cuando la mecha (con ruido) está baja
+      document.getElementById("bomba-emoji").classList.toggle("urgente",
+        st.modo === "mecha" && st.mechaFrac != null && st.mechaFrac < 0.3 && !!st.bombaEn);
+
+      const pl = document.getElementById("palabra-live");
+      pl.innerHTML = (!laTengoYo && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
+      const us = document.getElementById("usadas");
+      us.textContent = (st.usadas && st.usadas.length) ? "Ya dichas: " + st.usadas.slice(-6).join(" \u00b7 ") : "";
+
+      const tm = document.getElementById("turno-mio");
+      tm.style.display = laTengoYo ? "block" : "none";
+      const btnP = document.getElementById("btn-pasar");
+      if (btnP && !laTengoYo) btnP.disabled = false;
+
+      const vf = document.getElementById("vidas-fila");
+      vf.innerHTML = "";
+      st.jugadores.forEach(j => {
+        const chip = document.createElement("div");
+        chip.className = "vida-chip" + (j.id === st.bombaEn ? " hot" : "") + (j.vidas <= 0 ? " muerto" : "") + (!j.conectado ? " off-conn" : "");
+        const conn = j.conectado ? "" : " 📴";
+        chip.innerHTML = `<span>${j.emoji}</span> <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
+        vf.appendChild(chip);
+      });
+    } else {
+      document.getElementById("app").classList.remove("hot-bg");
+    }
+
+    if (st.fase === "podio") {
+      const orden = [...st.jugadores].sort((a, b) => b.vidas - a.vidas || (this.q(a.id) - this.q(b.id)));
+      const lista = document.getElementById("podio-lista");
+      lista.innerHTML = "";
+      const medallas = ["🥇","🥈","🥉"];
+      orden.forEach((j, i) => {
+        const li = document.createElement("li");
+        li.className = "podio-item" + (i === 0 ? " p1" : "");
+        li.style.animationDelay = (i * 0.08) + "s";
+        li.innerHTML = `
+          <span class="pos">${medallas[i] || (i + 1)}</span>
+          <span class="av">${j.emoji}</span>
+          <span class="nom">${this.escape(j.nombre)}</span>
+          <span class="det">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>`;
+        lista.appendChild(li);
+      });
+      this.renderPremios(st, orden);
+      document.getElementById("btn-revancha").style.display = LOCAL.soyHost ? "block" : "none";
+    }
+  },
+
+  q(id) { return (GAME.state.stats[id] && GAME.state.stats[id].quemado) || 0; },
+
+  renderPremios(st, orden) {
+    const cont = document.getElementById("premios");
+    cont.innerHTML = "";
+    const ids = st.jugadores.map(j => j.id);
+    const nombre = id => { const j = st.jugadores.find(x => x.id === id); return j ? `${j.emoji} ${this.escape(j.nombre)}` : "?"; };
+    const premios = [];
+    let mq = null, maxQ = 0;
+    ids.forEach(id => { const q = this.q(id); if (q > maxQ) { maxQ = q; mq = id; } });
+    if (mq) premios.push({ ic: "🔥", t: "El más quemado", n: nombre(mq), s: `explotó ${maxQ} ${maxQ === 1 ? "vez" : "veces"}` });
+    let mp = null, maxP = -1;
+    ids.forEach(id => { const p = (st.stats[id] && st.stats[id].pasadas) || 0; if (p > maxP) { maxP = p; mp = id; } });
+    if (mp && maxP > 0) premios.push({ ic: "⚡", t: "El más rápido", n: nombre(mp), s: `pasó la bomba ${maxP} veces` });
+    let ml = null, maxL = 0;
+    ids.forEach(id => { const l = (st.stats[id] && st.stats[id].masLargo) || 0; if (l > maxL) { maxL = l; ml = id; } });
+    if (ml && maxL > 0) premios.push({ ic: "🧠", t: "El más creativo", n: nombre(ml), s: `palabra de ${maxL} letras` });
+    if (orden[0]) premios.push({ ic: "👑", t: "Sobreviviente", n: nombre(orden[0].id), s: "el último en pie" });
+    premios.forEach((p, i) => {
+      const el = document.createElement("div");
+      el.className = "premio-chip";
+      el.style.animationDelay = (0.3 + i * 0.1) + "s";
+      el.innerHTML = `<span class="ic">${p.ic}</span><div class="txt-p"><b>${p.t}</b><span> ${p.n}</span><small>${p.s}</small></div>`;
+      cont.appendChild(el);
+    });
+  },
+
+  ultimaEnviada: "",
+  enviarPalabra() {
+    const inp = document.getElementById("in-palabra");
+    const texto = inp.value.trim();
+    if (!texto) return;
+    const btnP = document.getElementById("btn-pasar");
+    if (btnP && btnP.disabled) return;
+    if (btnP) { btnP.disabled = true; setTimeout(() => { if (btnP) btnP.disabled = false; }, 500); }
+    this.ultimaEnviada = texto;
+    inp.value = "";
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    if (LOCAL.soyHost) GAME.intentarPasar(LOCAL.miId, texto, nonce);
+    else NET.enviarInput({ kind: "pasar", texto, nonce });
+  },
+
+  copiarCodigo(ev) {
+    if (!LOCAL.codigo) return;
+    const b = (ev && ev.target) || document.querySelector(".copiar"); if (!b) return;
+    const t = b.textContent;
+    const ok = () => { b.textContent = "\u2705 copiado"; setTimeout(() => b.textContent = t, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(LOCAL.codigo).then(ok).catch(() => this.copiarFallback(ok));
+    } else this.copiarFallback(ok);
+  },
+  copiarFallback(ok) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = LOCAL.codigo; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      document.execCommand("copy"); ta.remove(); ok();
+    } catch (e) {}
+  },
+
+  empezar() { AUDIO.desbloquear(); GAME.empezar(); },
+  revancha() { GAME.revancha(); },
+
+  mostrarExplosion(data) {
+    AUDIO.explosion();
+    this.vibrar([120, 60, 200]);
+    const ov = document.getElementById("explosion");
+    const dmg = data.danio > 1 ? ` (-${data.danio} vidas!)` : "";
+    document.getElementById("explosion-txt").textContent =
+      (data.perdedorId === LOCAL.miId) ? `💥 ¡Explotó en tus manos!${dmg}` : `💥 Explotó con ${data.emoji} ${data.nombre}${dmg}`;
+    ov.classList.add("on");
+    const app = document.getElementById("app");
+    app.classList.add("shake");
+    this.particulas();
+    setTimeout(() => { ov.classList.remove("on"); app.classList.remove("shake"); }, 1600);
+  },
+
+  particulas() {
+    const wrap = document.querySelector(".bomba-wrap");
+    if (!wrap) return;
+    for (let i = 0; i < 14; i++) {
+      const p = document.createElement("div");
+      p.className = "particula";
+      wrap.appendChild(p);
+      const ang = Math.random() * Math.PI * 2;
+      const dist = 40 + Math.random() * 60;
+      const dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist;
+      p.style.left = "50%"; p.style.top = "40%";
+      p.style.background = Math.random() > .5 ? "var(--accent2)" : "var(--accent)";
+      p.animate([
+        { transform: "translate(0,0) scale(1)", opacity: 1 },
+        { transform: `translate(${dx}px,${dy}px) scale(0)`, opacity: 0 }
+      ], { duration: 600 + Math.random() * 300, easing: "cubic-bezier(.22,1,.36,1)" });
+      setTimeout(() => p.remove(), 950);
+    }
+  },
+
+  lluviaConfeti() {
+    const colores = ["#ff5722", "#ffb300", "#26d07c", "#b06bff", "#f2f0ff"];
+    for (let i = 0; i < 50; i++) {
+      const c = document.createElement("div");
+      c.className = "confeti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colores[Math.floor(Math.random() * colores.length)];
+      c.style.animationDuration = (1.8 + Math.random() * 1.6) + "s";
+      c.style.animationDelay = (Math.random() * 0.6) + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 3800);
+    }
+  },
+
+  vibrar(patron) {
+    try {
+      if (navigator.vibrate) { navigator.vibrate(patron); return; }
+      // Fallback iOS: taps del Taptic Engine vía label del switch oculto (no hace nada si el SO lo parcheó)
+      const lbl = document.getElementById("haptic-lbl");
+      if (!lbl) return;
+      const taps = Math.min(3, Array.isArray(patron) ? Math.ceil(patron.length / 2) : 1);
+      for (let i = 0; i < taps; i++) setTimeout(() => { try { lbl.click(); } catch (e) {} }, i * 120);
+    } catch (e) {}
+  },
+
+  volverInicioConError(motivo) { this.reset(); this.mostrar("p-inicio"); this.errorInicio(motivo || "No se pudo unir."); },
+  salir() {
+    NET.pararHeartbeat();
+    try { if (NET.peer) NET.peer.destroy(); } catch (e) {}
+    GAME.limpiarTimer(); this.reset(); this.mostrar("p-inicio");
+  },
+
+  reset() {
+    NET.pararHeartbeat();
+    NET.peer = null; NET.conns = []; NET.hostConn = null; NET.ultimoDelHost = 0;
+    LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null;
+    GAME.limpiarTimer(); GAME.ultimoNonce = {}; GAME.enPausa = false;
+    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null };
+    const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
+    document.getElementById("app").classList.remove("hot-bg");
+    this.ocultarBanner();
+    this.volverMenu();
+  },
+
+  escape(s) { return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+};
+
+/* ========== 7. AUDIO & EFECTOS (Web Audio API sintetizada) ========== */
+const AUDIO = {
+  ctx: null, muteado: false,
+  desbloquear() {
+    try {
+      if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      if (this.ctx.state === "suspended") this.ctx.resume();
+    } catch (e) {}
+  },
+  toggle() {
+    this.muteado = !this.muteado;
+    document.getElementById("mute-btn").textContent = this.muteado ? "🔇" : "🔊";
+    if (!this.muteado) this.desbloquear();
+  },
+  tono(freq, dur, tipo = "sine", vol = 0.25) {
+    if (this.muteado || !this.ctx) return;
+    try {
+      const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+      o.type = tipo; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, this.ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
+      o.connect(g); g.connect(this.ctx.destination);
+      o.start(); o.stop(this.ctx.currentTime + dur);
+    } catch (e) {}
+  },
+  tick() { this.tono(660, 0.12, "square", 0.2); setTimeout(() => this.tono(880, 0.1, "square", 0.18), 90); },
+  pop() { this.tono(520, 0.08, "triangle", 0.22); setTimeout(() => this.tono(780, 0.1, "triangle", 0.2), 60); },
+  error() { this.tono(140, 0.18, "sawtooth", 0.22); },
+  explosion() {
+    if (this.muteado || !this.ctx) return;
+    try {
+      this.tono(90, 0.5, "sawtooth", 0.35);
+      this.tono(60, 0.6, "square", 0.3);
+      const dur = 0.5;
+      const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const src = this.ctx.createBufferSource(); src.buffer = buffer;
+      const g = this.ctx.createGain(); g.gain.value = 0.35;
+      src.connect(g); g.connect(this.ctx.destination); src.start();
+    } catch (e) {}
+  }
+};
+
+/* ========== 8. ARRANQUE ========== */
+UI.initEmojis();
+document.getElementById("in-codigo").addEventListener("input", (e) => {
+  e.target.value = e.target.value.toUpperCase().replace(/[^A-Z]/g, "");
+});
+document.getElementById("in-palabra").addEventListener("input", (e) => {
+  const texto = e.target.value;
+  if (LOCAL.soyHost) { GAME.state.palabraActual = texto.slice(0, 40); NET.broadcastState(); }
+  else NET.enviarInput({ kind: "tipeando", texto });
+});
+document.getElementById("in-palabra").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); UI.enviarPalabra(); }
+});
+document.body.addEventListener("touchstart", () => AUDIO.desbloquear(), { once: true });
+document.body.addEventListener("click", () => AUDIO.desbloquear(), { once: true });
+window.addEventListener("beforeunload", () => { try { if (NET.peer) NET.peer.destroy(); } catch (e) {} });
+</script>
+</body>
+</html>
