@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v1.5 — Teclado más grande y adaptado a Android/iPhone, vibración vía Haptics de Capacitor (con permiso VIBRATE), 34 animalitos con look más real, QA de 1666 partidas -->
+<!-- Cadena Explosiva v18 Fase 3 — Nuevo modo AHORCADO EXPRÉS: palabra oculta, 4 opciones de letra por turno con timer, dificultad creciente por ronda, pool propio con rotación persistente. QA de los 3 modos en 0 fallas -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -120,7 +120,8 @@ input[type=text]:focus { border-color: var(--accent2); }
 .pill { display: inline-block; background: var(--card); padding: 6px 14px; border-radius: 20px; font-size: .85rem; margin: 4px auto; }
 
 /* ---- SELECTOR DE MODO ---- */
-.modo-sel { display: flex; gap: 10px; margin-top: 16px; }
+.modo-sel { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.modo-sel .modo-op { flex: 1 1 30%; min-width: 30%; }
 .modo-op {
   flex: 1; background: var(--card); border: 2px solid #2c2750; border-radius: 14px;
   padding: 12px 10px; text-align: center; cursor: pointer; transition: border-color .2s, transform .12s;
@@ -139,6 +140,24 @@ input[type=text]:focus { border-color: var(--accent2); }
 .turno-count.medio { color: var(--accent2); }
 .turno-count.critico { color: var(--danger); animation: latir .5s ease-in-out infinite; }
 .bomba-grande.urgente { animation: tembleque .15s ease-in-out infinite; filter: drop-shadow(0 0 26px rgba(255,59,92,.8)); }
+
+/* ---- MODO AHORCADO EXPRÉS ---- */
+.aho-mask { display: flex; gap: 7px; justify-content: center; flex-wrap: wrap; margin: 10px auto 2px; max-width: 360px; }
+.aho-mask .aho-l {
+  width: 32px; height: 44px; display: flex; align-items: center; justify-content: center;
+  font-size: 1.45rem; font-weight: 900; text-transform: uppercase;
+  border-bottom: 3px solid #2c2750; border-radius: 6px 6px 0 0; background: rgba(255,255,255,.04);
+}
+.aho-mask .aho-l.rev { color: var(--accent2); border-bottom-color: var(--ok); }
+.aho-mask .aho-l.hueco { border-bottom-color: var(--accent); animation: latir 1.1s ease-in-out infinite; }
+.aho-opciones { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.aho-op {
+  min-height: 64px; border-radius: 14px; font-size: 1.7rem; font-weight: 900; color: #fff;
+  background: var(--card); border: 2px solid #2c2750; cursor: pointer; text-transform: uppercase;
+  transition: transform .12s cubic-bezier(.22,1,.36,1); touch-action: manipulation;
+}
+.aho-op:active { transform: scale(.93); }
+.aho-op:disabled { filter: grayscale(.6) brightness(.6); }
 
 .mute-btn { position: fixed; top: 12px; right: 12px; background: var(--card); border: none; color: var(--txt); width: 40px; height: 40px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; z-index: 40; opacity: .8; }
 
@@ -230,6 +249,7 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 .anuncio-full.on { display: flex; animation: reglaIn .3s ease; }
 .anuncio-badge { background: var(--especial); color: #fff; font-weight: 900; letter-spacing: 2px; padding: 6px 16px; border-radius: 20px; font-size: .8rem; }
 .anuncio-txt { font-size: 1.45rem; font-weight: 900; color: #fff; max-width: 480px; line-height: 1.3; }
+.anuncio-txt.palabra-reves { font-size: 2.2rem; font-weight: 900; letter-spacing: 4px; color: #fff; }
 .anuncio-count { font-size: 4.5rem; font-weight: 900; color: var(--especial); line-height: 1; }
 .anuncio-sub { color: var(--muted); font-size: .9rem; }
 
@@ -346,6 +366,10 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
         <div class="mi">🕯️</div><div class="mt">MECHA COMPARTIDA</div>
         <div class="md">Mecha larga oculta, turnos con segundos visibles que se achican.</div>
       </div>
+      <div class="modo-op" id="modo-ahorcado" onclick="UI.setModo('ahorcado')">
+        <div class="mi">🔤</div><div class="mt">AHORCADO EXPRÉS</div>
+        <div class="md">Adiviná la próxima letra entre 4 opciones antes de que se acabe el tiempo.</div>
+      </div>
     </div>
     <p class="modo-lbl-invitado" id="modo-lbl" style="display:none"></p>
 
@@ -380,6 +404,7 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
       </div>
       <div class="quien-tiene" id="quien-tiene"></div>
       <div class="turno-count" id="turno-count"></div>
+      <div class="aho-mask" id="aho-mask"></div>
       <div class="palabra-live" id="palabra-live"></div>
       <div class="usadas" id="usadas"></div>
     </div>
@@ -389,6 +414,7 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
       <div class="regla-mini" id="regla-mini"></div>
       <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="none">
       <div class="teclado-propio" id="teclado-propio"></div>
+      <div class="aho-opciones" id="aho-opciones" style="display:none"></div>
       <button class="btn btn-primary" id="btn-pasar" onclick="UI.enviarPalabra()">PASAR LA BOMBA →</button>
       <p class="feedback-mal" id="feedback-mal"></p>
     </div>
@@ -415,10 +441,10 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 </div>
 
 <div id="anuncio" class="anuncio-full">
-  <div class="anuncio-badge">✦ RONDA ESPECIAL ✦</div>
+  <div class="anuncio-badge" id="anuncio-badge">✦ RONDA ESPECIAL ✦</div>
   <div class="anuncio-txt" id="anuncio-txt"></div>
   <div class="anuncio-count" id="anuncio-count"></div>
-  <div class="anuncio-sub">Léanla todos… la bomba sale a un jugador al azar</div>
+  <div class="anuncio-sub" id="anuncio-sub">Léanla todos… la bomba sale a un jugador al azar</div>
 </div>
 
 <div id="banner" class="banner"><span id="banner-txt"></span><span id="banner-accion"></span></div>
@@ -441,6 +467,8 @@ const CFG = {
   BOMBA_MIN_MS: 7000,
   BOMBA_MAX_MS: 20000,
   PROB_ESPECIAL: 0.18,
+  PROB_REVES: 0.12,             /* variante "al revés" (solo Clásico) */
+  REVES_PALABRA_SEG: 3,         /* segundos que la palabra queda visible para todos */
   ANUNCIO_SEG: 4,               /* cuenta regresiva del anuncio de ronda especial */
   HEARTBEAT_MS: 3000,
   TIMEOUT_MS: 10000,
@@ -449,12 +477,17 @@ const CFG = {
   M_VUELTAS_MIN: 3, M_VUELTAS_MAX: 5,       /* vueltas objetivo (al azar, oculto) */
   M_PASADA_PROM_MS: 5000,                    /* tiempo promedio estimado por pasada */
   M_TURNO_MIN_MS: 5000, M_TURNO_MAX_MS: 10000,
-  M_TURNO_PISO_MS: 3000,
+  M_TURNO_PISO_MS: 4200,
   M_PENA_VENCIDO: [10000, 25000],            /* turno vencido: descuenta a la mecha */
   M_PENA_INVALIDA: [5000, 15000],            /* palabra inválida: descuenta */
   M_BONO_LARGA: [1000, 4000],                /* palabra 8+ letras: suma (menos que el tiempo de pensar: la mecha siempre avanza) */
   M_DERIVA: 5000,                            /* deriva oculta ±0-5s por pasada */
-  M_TICK_MS: 250
+  M_TICK_MS: 250,
+  /* modo ahorcado exprés */
+  A_SEG_INI: 8,                              /* segundos para elegir letra al arranque */
+  A_SEG_MIN: 6,                              /* piso: baja 1 segundo cada 3 rondas hasta acá */
+  A_COMPLETA_SEG: 2,                         /* palabra completa a la vista antes de la nueva */
+  A_SIMIL_RONDA: 3                           /* desde esta ronda los distractores se parecen a la correcta */
 };
 
 const POOL_LETRAS = "ABCDEFGHILMNOPRSTU".split("");
@@ -586,6 +619,55 @@ const DOBLE_MIN = [2, 5, 6, 7, 8, 9];          /* mínimo de letras por nivel */
 const DOBLE_CONT = "aeors".split("");           /* letras "contiene" fáciles */
 const DOBLE_INI = "acdemprst".split("");        /* letras "empieza" fáciles */
 
+
+/* ========== 3c. VARIANTE "AL REVÉS" (solo Clásico): pool propio + rotación persistente ========== */
+const PAL_REVES = ("camino ventana caballo botella cuchara tortuga zapato mochila espejo almohada cocina escuela pintura naranja campana montaña corazon estrella tormenta sombrero pescado gallina paloma serpiente elefante mariposa cangrejo delfino escalera lampara alfombra cortina heladera guitarra tambor trompeta violin canasta bufanda campera pantufla remera pollera vestido anillo collar pulsera reloj cartera paraguas linterna martillo tornillo destornillador candado cadena soga cuerda madera ladrillo cemento pintor jardin plantas semilla raices tronco corteza ramas hojas flores fruto semaforo vereda esquina avenida plaza fuente estatua banco farol buzon cartero paquete sobre carta estampilla regalo cumple fiesta globo torta velita payaso musica cancion baile teatro pelicula pantalla butaca entrada boleto viaje valija pasaporte avion aeropuerto piloto azafata destino brujula mapa isla oceano barco ancla vela timon pirata tesoro cofre moneda diamante rubi perla nube trueno rayo llovizna granizo escarcha invierno verano otoño primavera calor fresco abrigo frazada colchon almacen verduleria panaderia carniceria farmacia hospital doctora enfermero paciente remedio jarabe curita venda termometro fiebre estornudo bostezo sonrisa carcajada susurro grito silencio ruido melodia tecla cuaderno lapicera carpeta mochilero pizarra tiza borrador recreo campanada maestra alumno tarea examen respuesta pregunta lectura escritura numero letra palabra oracion cuento novela poema historia leyenda dragon castillo princesa caballero espada escudo corona trono reino bosque sendero cabaña fogata carpa brasas ceniza humo chispa fosforo cocinero receta harina azucar levadura masa relleno horno bandeja cazuela sarten cacerola hervor vapor aroma sabor dulzura amargo salado picante especia canela vainilla limonada naranjada licuado batido helado cucurucho barquillo caramelo chupetin bombon turron confite").split(" ");
+const ROTACION_REVES = {
+  clave: "cadena_uso_reves_v1",
+  uso: (() => { try { return JSON.parse(localStorage.getItem("cadena_uso_reves_v1")) || {}; } catch (e) { return {}; } })(),
+  elegir(excluir) {
+    let cands = PAL_REVES.filter(p => !excluir.has(p));
+    if (!cands.length) cands = PAL_REVES;
+    let min = Infinity;
+    cands.forEach(p => { const u = this.uso[p] || 0; if (u < min) min = u; });
+    const top = cands.filter(p => (this.uso[p] || 0) === min);
+    const el = top[Math.floor(Math.random() * top.length)];
+    this.uso[el] = (this.uso[el] || 0) + 1;
+    try { localStorage.setItem(this.clave, JSON.stringify(this.uso)); } catch (e) {}
+    return el;
+  }
+};
+
+/* ========== 3d. MODO AHORCADO EXPRÉS: pool propio por largo + rotación persistente ========== */
+const AHO_PALABRAS = ("casa gato mesa pato sol luna rio flor pan tren rey mar luz sal cielo playa perro fuego nube arbol silla libro leche fruta calle plaza barco avion reloj papel radio piano queso torta pasto verde falda dedo mano pierna diente noche tarde jugo vaso plato agua tigre "
++ "camino ventana botella cuchara zapato espejo cocina pintura campana corazon tormenta pescado paloma escalera lampara cortina guitarra tambor violin canasta bufanda remera vestido anillo collar cartera linterna martillo candado cadena madera semilla esquina avenida fuente estatua paquete regalo fiesta musica cancion teatro butaca entrada boleto valija destino brujula oceano ancla pirata tesoro moneda perla trueno granizo invierno verano abrigo frazada colchon farmacia doctora remedio jarabe venda fiebre sonrisa silencio melodia cuaderno carpeta pizarra borrador recreo maestra alumno examen lectura numero palabra cuento novela poema leyenda dragon castillo caballero espada escudo corona bosque sendero fogata ceniza chispa receta harina azucar levadura relleno bandeja sarten vapor aroma sabor canela helado caramelo bombon turron sandia melon banana cereza tomate cebolla lechuga zapallo choclo elefante jirafa ballena tortuga hormiga mariposa caracol gallina conejo caballo camello pinguino "
++ "montaña serpiente cangrejo almohada heladera trompeta pantufla pollera paraguas tornillo ladrillo cemento carnicero panadero bombero cartero jardinero costurera peluquero verdulero telefono computadora televisor auricular microfono cargador impresora ventilador aspiradora heladeria biblioteca escritorio estanteria dormitorio lavadero cochera balcon terraza vereda semaforo colectivo bicicleta monopatin submarino helicoptero aeropuerto pasaporte estampilla cumpleaños chocolate mermelada milanesa empanada hamburguesa ensalada tortilla panqueque medialuna golondrina murcielago cocodrilo rinoceronte hipopotamo escorpion carpincho avestruz flamenco picaflor calendario diccionario termometro estornudo carcajada primavera catarata relampago arcoiris terremoto escarcha neblina cascada desierto pradera universo planeta estrella galaxia cometa satelite meteorito constelacion aventura misterio laberinto fantasma esqueleto vampiro princesa monstruo gigante enano mago bruja hada duende sirena unicornio")
+.split(" ").filter(p => p.length >= 3);
+const ROTACION_AHO = {
+  clave: "cadena_uso_aho_v1",
+  uso: (() => { try { return JSON.parse(localStorage.getItem("cadena_uso_aho_v1")) || {}; } catch (e) { return {}; } })(),
+  elegir(excluir, minL, maxL) {
+    let cands = AHO_PALABRAS.filter(p => !excluir.has(p) && p.length >= minL && p.length <= maxL);
+    if (!cands.length) cands = AHO_PALABRAS.filter(p => p.length >= minL && p.length <= maxL);
+    if (!cands.length) cands = AHO_PALABRAS.filter(p => !excluir.has(p));
+    if (!cands.length) cands = AHO_PALABRAS;
+    let min = Infinity;
+    cands.forEach(p => { const u = this.uso[p] || 0; if (u < min) min = u; });
+    const top = cands.filter(p => (this.uso[p] || 0) === min);
+    const el = top[Math.floor(Math.random() * top.length)];
+    this.uso[el] = (this.uso[el] || 0) + 1;
+    try { localStorage.setItem(this.clave, JSON.stringify(this.uso)); } catch (e) {}
+    return el;
+  }
+};
+/* grupos de letras parecidas (fonética/visual) para distractores difíciles */
+const AHO_SIMIL = (() => {
+  const grupos = ["bvpd", "mnñ", "cszxq", "gjq", "ily", "aeou", "hkf", "rtl", "uvw"];
+  const m = {};
+  grupos.forEach(g => g.split("").forEach(l => m[l] = (m[l] || "") + g.replace(l, "")));
+  return m;
+})();
+
 const LOCAL = { soyHost: false, miId: null, nombre: "", emoji: CFG.EMOJIS[0], codigo: null, enSala: false };
 
 /* ========== 3b. DICCIONARIO ES + EN (valida el host) ========== */
@@ -624,21 +706,28 @@ const NET = {
   },
   peerIdDe(codigo) { return CFG.PREFIJO + codigo; },
 
+  creandoSala: false,
   crearSala() {
+    if (this.creandoSala) return;
+    this.creandoSala = true;
+    this._crearSalaInterno();
+  },
+  _crearSalaInterno() {
     LOCAL.soyHost = true;
     LOCAL.codigo = this.generarCodigo();
     const id = this.peerIdDe(LOCAL.codigo);
     LOCAL.miId = id;
     this.peer = new Peer(id, { debug: 1 });
     this.peer.on("open", () => {
+      this.creandoSala = false;
       GAME.state.jugadores.push({ id, nombre: LOCAL.nombre, emoji: LOCAL.emoji, vidas: CFG.VIDAS_INI, conectado: true });
       UI.irLobby(); UI.render();
     });
     this.peer.on("connection", (conn) => this.onInvitadoConecta(conn));
     this.peer.on("disconnected", () => { try { this.peer.reconnect(); } catch (e) {} });
     this.peer.on("error", (err) => {
-      if (err.type === "unavailable-id") { try { this.peer.destroy(); } catch (e) {} this.crearSala(); }
-      else if (err.type === "network" || err.type === "server-error") { UI.banner("Problema de red del servidor. Reintentá.", null, true); }
+      if (err.type === "unavailable-id") { try { this.peer.destroy(); } catch (e) {} this._crearSalaInterno(); }
+      else if (err.type === "network" || err.type === "server-error") { this.creandoSala = false; LOCAL.enSala = false; UI.banner("Problema de red del servidor. Reintentá.", null, true); }
       else { console.error(err); }
     });
   },
@@ -659,10 +748,7 @@ const NET = {
       const sig = GAME.proximoTurno(conn.peer);
       if (sig == null) GAME.chequearFin();
       else if (GAME.state.ronda !== rondaAntes) GAME.prepararRonda(sig);
-      else {
-        if (!GAME.state.esEspecial) GAME.state.reglaActual = GAME.reglaNormal();
-        GAME.pasarBombaA(sig);
-      }
+      else GAME.continuarTurno(sig, false);
     }
     this.broadcastState(); UI.render();
   },
@@ -695,6 +781,9 @@ const NET = {
       }
       else if (msg.data.kind === "pasar" && GAME.state.bombaEn === conn.peer) {
         GAME.intentarPasar(conn.peer, msg.data.texto, msg.data.nonce);
+      }
+      else if (msg.data.kind === "letra" && GAME.state.bombaEn === conn.peer) {
+        GAME.intentarLetra(conn.peer, msg.data.letra, msg.data.nonce);
       }
     }
   },
@@ -809,11 +898,21 @@ const GAME = {
   state: {
     fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false,
     palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {},
-    modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null
+    modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null,
+    revesPalabra: null, revesSeg: null,
+    ahoMask: null, ahoOpciones: null, ahoCompleta: null
   },
   bombaTimer: null,
   ultimoNonce: {},
   anuncioInt: null,               /* intervalo del anuncio de ronda especial */
+  revesInt: null,                 /* intervalo del contador común de la palabra al revés */
+  revesPartida: new Set(),        /* palabras "al revés" ya usadas en ESTA partida */
+  revesObjetivo: null,            /* la palabra invertida que valida el host */
+  ahoInt: null,                   /* intervalo del timer de elección (ahorcado) */
+  ahoCompTimeout: null,           /* timeout de "palabra completa" (ahorcado) */
+  ahoPartida: new Set(),          /* palabras del ahorcado ya usadas en ESTA partida */
+  ahoPalabra: null,               /* palabra actual (solo host, oculta) */
+  ahoReveladas: new Set(),        /* letras ya reveladas de la palabra actual */
   consignasPartida: new Set(),    /* consignas ya usadas en ESTA partida (no repetir dentro) */
   enPausa: false,   // FIX QA: true durante la pausa post-explosión (nadie tiene la bomba)
   /* --- orden de turnos por ronda (solo host): cada ronda arranca en un jugador al azar --- */
@@ -879,10 +978,19 @@ const GAME = {
     this.state.ultimaPalabra = "";
     return r;
   },
+  reglaReves() {
+    this.state.esEspecial = true;
+    this.state.ultimaPalabra = "";
+    return { id: "reves", tipo: "reves", flag: "", texto: "\u{1F501} AL REV\u00c9S: mir\u00e1 bien la palabra que aparece\u2026 \u00a1y escribila AL REV\u00c9S!" };
+  },
   /* Arranque de ronda: si toca especial, primero el anuncio para todos con cuenta regresiva */
   prepararRonda(primeroId) {
     if (primeroId == null) { this.chequearFin(); return; }
-    if (Math.random() < CFG.PROB_ESPECIAL) {
+    if (this.state.modo === "ahorcado") { this.pasarBombaA(primeroId); return; }
+    if (this.state.modo === "clasico" && Math.random() < CFG.PROB_REVES) {
+      this.state.reglaActual = this.reglaReves();
+      this.anunciarEspecial(primeroId);
+    } else if (Math.random() < CFG.PROB_ESPECIAL) {
       this.state.reglaActual = this.reglaEspecial();
       this.anunciarEspecial(primeroId);
     } else {
@@ -891,6 +999,9 @@ const GAME = {
     }
   },
   anunciarEspecial(primeroId) {
+    // FIX QA Fase 3: el bombaTimer del turno anterior seguía armado y podía "explotar" durante
+    // el anuncio (con bombaEn null), matando el intervalo y congelando la partida. Se limpia acá.
+    this.limpiarTimer();
     this.state.bombaEn = null;
     this.state.palabraActual = "";
     this.enPausa = true;
@@ -904,9 +1015,41 @@ const GAME = {
         clearInterval(this.anuncioInt); this.anuncioInt = null;
         this.state.anuncioSeg = null;
         this.enPausa = false;
-        this.pasarBombaA(primeroId);
+        if (this.state.reglaActual && this.state.reglaActual.tipo === "reves") this.mostrarPalabraReves(primeroId);
+        else this.pasarBombaA(primeroId);
       } else { AUDIO.tick(); NET.broadcastState(); UI.render(); }
     }, 1000);
+  },
+  /* Muestra la palabra ~3s con contador común para TODOS; después la oculta y recién ahí sale la bomba */
+  mostrarPalabraReves(sigId) {
+    this.limpiarTimer();
+    this.enPausa = true;
+    this.state.bombaEn = null;
+    this.state.palabraActual = "";
+    const pal = ROTACION_REVES.elegir(this.revesPartida);
+    this.revesPartida.add(pal);
+    this.revesObjetivo = pal.split("").reverse().join("");
+    this.state.revesPalabra = pal;
+    this.state.revesSeg = CFG.REVES_PALABRA_SEG;
+    AUDIO.tick();
+    NET.broadcastState(); UI.render();
+    this.revesInt = setInterval(() => {
+      this.state.revesSeg--;
+      if (this.state.revesSeg <= 0) {
+        clearInterval(this.revesInt); this.revesInt = null;
+        this.state.revesPalabra = null; this.state.revesSeg = null;
+        this.enPausa = false;
+        this.pasarBombaA(sigId);
+      } else { AUDIO.tick(); NET.broadcastState(); UI.render(); }
+    }, 1000);
+  },
+  /* Continuación de turno dentro de la misma ronda (pase válido, explosión o desconexión) */
+  continuarTurno(sig, escalar) {
+    if (this.state.modo === "ahorcado") { this.pasarBombaA(sig); return; }
+    if (this.state.esEspecial && this.state.reglaActual && this.state.reglaActual.tipo === "reves") { this.mostrarPalabraReves(sig); return; }
+    if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
+    else if (escalar && this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
+    this.pasarBombaA(sig);
   },
   textoDoble(r) {
     const n = Math.min(r.nivel || 0, DOBLE_MIN.length - 1);
@@ -935,8 +1078,17 @@ const GAME = {
     this.state.fase = "jugando"; this.state.ronda = 1; this.state.stats = {};
     this.state.turnoSeg = null; this.state.mechaFrac = null; this.state.anuncioSeg = null;
     this.state.palabraActual = ""; this.state.usadas = []; this.state.ultimaPalabra = "";
+    this.state.revesPalabra = null; this.state.revesSeg = null;
+    this.revesPartida = new Set(); this.revesObjetivo = null;
+    this.state.ahoMask = null; this.state.ahoOpciones = null; this.state.ahoCompleta = null;
+    this.ahoPartida = new Set(); this.ahoPalabra = null; this.ahoReveladas = new Set();
     this.nuevaRonda(null);
     if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
+    if (this.state.modo === "ahorcado") {
+      this.state.reglaActual = { id: "ahorcado", tipo: "ahorcado", flag: "", texto: "\u{1F524} AHORCADO EXPR\u00c9S: toc\u00e1 la letra que sigue en la palabra" };
+      this.state.esEspecial = false;
+      this.nuevaPalabraAho();
+    }
     this.prepararRonda(this.orden[0]);
     NET.broadcastState(); UI.irJuego();
   },
@@ -945,6 +1097,7 @@ const GAME = {
     this.enPausa = false;
     this.state.bombaEn = id; this.state.palabraActual = "";
     if (this.state.modo === "mecha") { this.limpiarTimer(); this.nuevoTurno(); if (!this.mechaInterval) this.arrancarTick(); }
+    else if (this.state.modo === "ahorcado") { this.generarOpcionesAho(); this.armarTimerAho(); }
     else this.armarTimer();
     NET.broadcastState(); UI.render();
     if (id === LOCAL.miId) { UI.turnoFresco(); AUDIO.tick(); UI.vibrar([60]); }
@@ -1007,6 +1160,119 @@ const GAME = {
     }
   },
 
+  /* ===== MODO AHORCADO EXPRÉS (solo host) ===== */
+  ahoSegRonda() { return Math.max(CFG.A_SEG_MIN, CFG.A_SEG_INI - Math.floor((this.state.ronda - 1) / 3)); },
+  /* dificultad creciente: palabras más largas por ronda */
+  ahoLargoRonda() {
+    const r = this.state.ronda;
+    if (r <= 1) return [4, 5];
+    if (r === 2) return [5, 6];
+    if (r === 3) return [6, 7];
+    if (r === 4) return [7, 8];
+    return [8, 99];
+  },
+  nuevaPalabraAho() {
+    const rango = this.ahoLargoRonda();
+    const pal = ROTACION_AHO.elegir(this.ahoPartida, rango[0], rango[1]);
+    this.ahoPartida.add(pal);
+    this.ahoPalabra = pal;
+    this.ahoReveladas = new Set();
+    this.actualizarMaskAho();
+  },
+  actualizarMaskAho() {
+    this.state.ahoMask = this.ahoPalabra.split("").map(l => this.ahoReveladas.has(l) ? l : "_").join("");
+  },
+  ahoHueco() {
+    const m = this.state.ahoMask || "";
+    for (let i = 0; i < m.length; i++) if (m[i] === "_") return i;
+    return -1;
+  },
+  /* 4 opciones: la correcta + 3 distractores que NO son candidatas reales (ninguna letra que falte en la palabra).
+     Desde A_SIMIL_RONDA los distractores salen primero del grupo de letras parecidas a la correcta. */
+  generarOpcionesAho() {
+    const idx = this.ahoHueco();
+    if (idx < 0) return;
+    const correcta = this.ahoPalabra[idx];
+    const faltan = new Set(this.ahoPalabra.split("").filter(l => !this.ahoReveladas.has(l)));
+    const ABC = "abcdefghijklmnopqrstuvwxyz\u00f1".split("");
+    const validas = ABC.filter(l => !faltan.has(l));
+    const distractores = [];
+    if (this.state.ronda >= CFG.A_SIMIL_RONDA) {
+      const parecidas = validas.filter(l => (AHO_SIMIL[correcta] || "").includes(l));
+      while (parecidas.length && distractores.length < 3) {
+        distractores.push(parecidas.splice(Math.floor(Math.random() * parecidas.length), 1)[0]);
+      }
+    }
+    const resto = validas.filter(l => !distractores.includes(l));
+    while (distractores.length < 3 && resto.length) {
+      distractores.push(resto.splice(Math.floor(Math.random() * resto.length), 1)[0]);
+    }
+    const ops = [correcta, ...distractores];
+    for (let i = ops.length - 1; i > 0; i--) {
+      const k = Math.floor(Math.random() * (i + 1));
+      const tmp = ops[i]; ops[i] = ops[k]; ops[k] = tmp;
+    }
+    this.state.ahoOpciones = ops;
+  },
+  armarTimerAho() {
+    this.limpiarTimer();
+    this.state.turnoSeg = this.ahoSegRonda();
+    this.ahoInt = setInterval(() => {
+      if (this.enPausa || this.state.fase !== "jugando") return;
+      this.state.turnoSeg--;
+      if (this.state.turnoSeg <= 0) { this.explota(); return; }
+      if (this.state.bombaEn === LOCAL.miId && this.state.turnoSeg <= 3) AUDIO.tick();
+      NET.broadcastState(); UI.render();
+    }, 1000);
+  },
+  intentarLetra(deId, letra, nonce) {
+    if (this.enPausa) return;
+    if (this.state.modo !== "ahorcado" || this.state.fase !== "jugando") return;
+    if (this.state.bombaEn !== deId) return;
+    if (nonce != null && this.ultimoNonce[deId] === nonce) return;
+    if (nonce != null) this.ultimoNonce[deId] = nonce;
+    const idx = this.ahoHueco();
+    if (idx < 0) return;
+    const l = DICC.normalizar(letra).slice(0, 1);
+    if (!this.state.ahoOpciones || this.state.ahoOpciones.indexOf(l) < 0) return;
+    if (l !== this.ahoPalabra[idx]) {
+      NET.broadcastEvent("invalida", { id: deId, motivo: "\u00a1Letra equivocada!" });
+      if (deId === LOCAL.miId) { UI.feedbackMal("\u00a1Letra equivocada!"); AUDIO.error(); }
+      this.explota();
+      return;
+    }
+    /* acierto: se revelan TODAS las apariciones de la letra y pasa la bomba */
+    this.ahoReveladas.add(l);
+    this.actualizarMaskAho();
+    const s = this.statDe(deId);
+    s.pasadas++;
+    NET.broadcastEvent("paso", { id: deId });
+    if (deId === LOCAL.miId) AUDIO.pop();
+    this.limpiarTimer();
+    this.state.turnoSeg = null;
+    const sig = this.proximoTurno(deId);
+    if (sig == null) { this.chequearFin(); return; }
+    if (this.ahoHueco() < 0) { this.completarPalabraAho(sig); return; }
+    this.pasarBombaA(sig);
+  },
+  /* palabra completa: se muestra 2s para todos y arranca una nueva */
+  completarPalabraAho(sigId) {
+    this.limpiarTimer();
+    this.enPausa = true;
+    this.state.bombaEn = null; this.state.turnoSeg = null; this.state.ahoOpciones = null;
+    this.state.ahoCompleta = this.ahoPalabra;
+    AUDIO.pop(); UI.vibrar([40, 40, 40]);
+    NET.broadcastState(); UI.render();
+    this.ahoCompTimeout = setTimeout(() => {
+      this.ahoCompTimeout = null;
+      this.state.ahoCompleta = null;
+      this.enPausa = false;
+      if (this.state.fase !== "jugando") return;
+      this.nuevaPalabraAho();
+      this.pasarBombaA(sigId);
+    }, CFG.A_COMPLETA_SEG * 1000);
+  },
+
   armarTimer() {
     this.limpiarTimer();
     let min = CFG.BOMBA_MIN_MS, max = CFG.BOMBA_MAX_MS;
@@ -1016,7 +1282,10 @@ const GAME = {
   },
   limpiarTimer() {
     if (this.anuncioInt) { clearInterval(this.anuncioInt); this.anuncioInt = null; }
+    if (this.revesInt) { clearInterval(this.revesInt); this.revesInt = null; }
     if (this.bombaTimer) { clearTimeout(this.bombaTimer); this.bombaTimer = null; }
+    if (this.ahoInt) { clearInterval(this.ahoInt); this.ahoInt = null; }
+    if (this.ahoCompTimeout) { clearTimeout(this.ahoCompTimeout); this.ahoCompTimeout = null; }
     this.pararTick();
   },
 
@@ -1026,6 +1295,10 @@ const GAME = {
     if (crudo.length > 40) return { ok: false, motivo: "Demasiado larga." };
     const t = DICC.normalizar(crudo);
     if (!/^[a-zñ]+$/.test(t)) return { ok: false, motivo: "Una sola palabra, solo letras." };
+    if (regla && regla.tipo === "reves") {
+      if (!this.revesObjetivo) return { ok: false, motivo: "Esper\u00e1 la palabra." };
+      return t === this.revesObjetivo ? { ok: true } : { ok: false, motivo: "As\u00ed no es. \u00a1Al rev\u00e9s, letra por letra!" };
+    }
     /* en consignas de categoría manda la lista propia; en el resto, el diccionario */
     if (!(regla && regla.tipo === "categoria") && !DICC.existe(t)) return { ok: false, motivo: "Esa palabra no existe. Fijate cómo se escribe." };
     if (this.state.usadas.includes(t)) return { ok: false, motivo: "Ya se usó en esta partida." };
@@ -1088,8 +1361,8 @@ const GAME = {
       return;
     }
     const limpia = DICC.normalizar(texto);
-    this.state.usadas.push(limpia);
-    this.state.ultimaPalabra = limpia;
+    const esReves = this.state.reglaActual && this.state.reglaActual.tipo === "reves";
+    if (!esReves) { this.state.usadas.push(limpia); this.state.ultimaPalabra = limpia; }
     const s = this.statDe(deId);
     s.pasadas++; s.masLargo = Math.max(s.masLargo, limpia.length);
     if (this.state.modo === "mecha") {
@@ -1103,9 +1376,7 @@ const GAME = {
     if (sig == null) { this.chequearFin(); return; }
     if (this.state.ronda !== rondaAntes) { this.prepararRonda(sig); return; }
     // seguimos dentro de la misma ronda
-    if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
-    else if (this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
-    this.pasarBombaA(sig);
+    this.continuarTurno(sig, true);
   },
 
   explota() {
@@ -1121,6 +1392,7 @@ const GAME = {
     this.enPausa = true;
     this.state.bombaEn = null;
     this.state.palabraActual = "";
+    this.state.ahoOpciones = null;
     NET.broadcastEvent("explosion", { perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
     UI.mostrarExplosion({ perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
     NET.broadcastState(); UI.render();
@@ -1135,8 +1407,7 @@ const GAME = {
       if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
       if (this.state.ronda !== rondaAntes) { this.prepararRonda(sig); return; }
       // misma ronda: consigna nueva (si era especial, se mantiene la regla de la ronda)
-      if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
-      this.pasarBombaA(sig);
+      this.continuarTurno(sig, false);
     }, CFG.PAUSA_EXPLOSION_MS);
   },
 
@@ -1144,7 +1415,7 @@ const GAME = {
     if (this.vivos().length <= 1) {
       this.limpiarTimer();
       this.enPausa = false;
-      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null; this.state.anuncioSeg = null; this.state.anuncioSeg = null;
+      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null; this.state.anuncioSeg = null; this.state.revesPalabra = null; this.state.revesSeg = null; this.state.ahoOpciones = null; this.state.ahoCompleta = null;
       NET.broadcastState(); UI.irPodio();
       return true;
     }
@@ -1208,9 +1479,19 @@ const UI = {
     NET.broadcastState(); this.render();
   },
   avisoTurnoVencido() { this.feedbackMal("\u23F1\uFE0F \u00a1Turno vencido! La mecha se acort\u00f3\u2026"); AUDIO.error(); this.vibrar([80, 40, 80]); },
+  /* ahorcado: elegir una de las 4 letras */
+  elegirLetra(l) {
+    const cont = document.getElementById("aho-opciones");
+    if (cont) cont.querySelectorAll("button").forEach(b => b.disabled = true);
+    this.vibrar(10);
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    if (LOCAL.soyHost) GAME.intentarLetra(LOCAL.miId, l, nonce);
+    else NET.enviarInput({ kind: "letra", letra: l, nonce });
+  },
 
   leerNombre() { return document.getElementById("in-nombre").value.trim().slice(0, 14); },
   crearSala() {
+    if (LOCAL.enSala || NET.creandoSala) return;
     const n = this.leerNombre();
     if (!n) { this.errorInicio("Escribí tu nombre primero."); return; }
     AUDIO.desbloquear();
@@ -1301,16 +1582,18 @@ const UI = {
       const sel = document.getElementById("modo-sel");
       const lbl = document.getElementById("modo-lbl");
       if (sel && lbl) {
-        const oc = document.getElementById("modo-clasico"), om = document.getElementById("modo-mecha");
-        oc.classList.toggle("sel", st.modo !== "mecha");
+        const oc = document.getElementById("modo-clasico"), om = document.getElementById("modo-mecha"), oa = document.getElementById("modo-ahorcado");
+        oc.classList.toggle("sel", st.modo !== "mecha" && st.modo !== "ahorcado");
         om.classList.toggle("sel", st.modo === "mecha");
+        oa.classList.toggle("sel", st.modo === "ahorcado");
         if (LOCAL.soyHost) {
           sel.style.display = "flex"; lbl.style.display = "none";
-          oc.classList.remove("bloqueado"); om.classList.remove("bloqueado");
+          oc.classList.remove("bloqueado"); om.classList.remove("bloqueado"); oa.classList.remove("bloqueado");
         } else {
           sel.style.display = "flex"; lbl.style.display = "block";
-          oc.classList.add("bloqueado"); om.classList.add("bloqueado");
-          lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + (st.modo === "mecha" ? "\u{1F56F}\uFE0F Mecha Compartida" : "\u{1F4A3} Cl\u00e1sico");
+          oc.classList.add("bloqueado"); om.classList.add("bloqueado"); oa.classList.add("bloqueado");
+          const nombreModo = st.modo === "mecha" ? "\u{1F56F}\uFE0F Mecha Compartida" : (st.modo === "ahorcado" ? "\u{1F524} Ahorcado Expr\u00e9s" : "\u{1F4A3} Cl\u00e1sico");
+          lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + nombreModo;
         }
       }
     }
@@ -1333,13 +1616,29 @@ const UI = {
         ? '<span class="nombre-hot">¡La tenés vos! 🔥</span>'
         : (hot ? `La tiene <span class="nombre-hot">${hot.emoji} ${this.escape(hot.nombre)}</span>` : "");
 
-      // contador visible (solo modo mecha)
+      // contador visible (modos mecha y ahorcado)
       const tc = document.getElementById("turno-count");
       if (tc) {
-        if (st.modo === "mecha" && st.turnoSeg != null && st.bombaEn) {
+        if ((st.modo === "mecha" || st.modo === "ahorcado") && st.turnoSeg != null && st.bombaEn) {
           tc.textContent = "\u23F1\uFE0F " + st.turnoSeg + "s";
           tc.className = "turno-count " + (st.turnoSeg <= 3 ? "critico" : st.turnoSeg <= 5 ? "medio" : "ok");
         } else { tc.textContent = ""; tc.className = "turno-count"; }
+      }
+      // máscara de la palabra (solo modo ahorcado, la ven todos)
+      const am = document.getElementById("aho-mask");
+      if (am) {
+        am.innerHTML = "";
+        if (st.modo === "ahorcado" && st.ahoMask) {
+          let huecoMarcado = false;
+          st.ahoMask.split("").forEach(l => {
+            const d = document.createElement("div");
+            const esHueco = l === "_";
+            d.className = "aho-l" + (esHueco ? (huecoMarcado ? "" : " hueco") : " rev");
+            if (esHueco && !huecoMarcado) huecoMarcado = true;
+            d.textContent = esHueco ? "" : l;
+            am.appendChild(d);
+          });
+        }
       }
       // bomba cada vez más nerviosa cuando la mecha (con ruido) está baja
       document.getElementById("bomba-emoji").classList.toggle("urgente",
@@ -1354,7 +1653,32 @@ const UI = {
 
       const tm = document.getElementById("turno-mio");
       tm.style.display = laTengoYo ? "block" : "none";
-      document.getElementById("app").classList.toggle("teclado", laTengoYo);
+      const esAho = st.modo === "ahorcado";
+      document.getElementById("app").classList.toggle("teclado", laTengoYo && !esAho);
+      // en ahorcado no hay input ni teclado: 4 botones de letra
+      const inpEl = document.getElementById("in-palabra");
+      const tecEl = document.getElementById("teclado-propio");
+      const btnPasar = document.getElementById("btn-pasar");
+      const opCont = document.getElementById("aho-opciones");
+      if (inpEl) inpEl.style.display = esAho ? "none" : "block";
+      if (tecEl) tecEl.style.display = esAho ? "none" : "";
+      if (btnPasar) btnPasar.style.display = esAho ? "none" : "block";
+      if (opCont) {
+        opCont.style.display = esAho && laTengoYo ? "grid" : "none";
+        opCont.innerHTML = "";
+        if (esAho && laTengoYo && st.ahoOpciones) {
+          st.ahoOpciones.forEach(l => {
+            const b = document.createElement("button");
+            b.type = "button";
+            b.className = "aho-op";
+            b.textContent = l;
+            b.addEventListener("pointerdown", (e) => { e.preventDefault(); UI.elegirLetra(l); });
+            opCont.appendChild(b);
+          });
+        }
+      }
+      const aviso = tm.querySelector(".aviso");
+      if (aviso) aviso.textContent = esAho ? "\u{1F525} \u00a1La ten\u00e9s vos! Toc\u00e1 la letra que sigue" : "\u{1F525} \u00a1La ten\u00e9s vos! Escrib\u00ed una palabra";
       const rm = document.getElementById("regla-mini");
       if (rm) {
         rm.textContent = st.reglaActual ? st.reglaActual.texto : "";
@@ -1380,12 +1704,30 @@ const UI = {
     /* anuncio a pantalla completa de ronda especial (para todos, con cuenta regresiva) */
     const an = document.getElementById("anuncio");
     if (an) {
-      const activo = st.fase === "jugando" && st.anuncioSeg != null;
-      an.classList.toggle("on", activo);
-      if (activo) {
-        document.getElementById("anuncio-txt").textContent = st.reglaActual ? st.reglaActual.texto : "";
+      const esAnuncio = st.fase === "jugando" && st.anuncioSeg != null;
+      const esPalabraReves = st.fase === "jugando" && st.revesPalabra != null;
+      const esAhoCompleta = st.fase === "jugando" && st.ahoCompleta != null;
+      an.classList.toggle("on", esAnuncio || esPalabraReves || esAhoCompleta);
+      const badge = document.getElementById("anuncio-badge"), sub = document.getElementById("anuncio-sub"), txt = document.getElementById("anuncio-txt");
+      if (esAhoCompleta) {
+        badge.textContent = "\u{1F389} \u00a1PALABRA COMPLETA!";
+        txt.textContent = st.ahoCompleta.toUpperCase();
+        txt.classList.add("palabra-reves");
+        document.getElementById("anuncio-count").textContent = "";
+        sub.textContent = "Ah\u00ed viene otra\u2026";
+      } else if (esPalabraReves) {
+        badge.textContent = "\u{1F501} PALABRA";
+        txt.textContent = st.revesPalabra.toUpperCase();
+        txt.classList.add("palabra-reves");
+        document.getElementById("anuncio-count").textContent = st.revesSeg;
+        sub.textContent = "Memorizala\u2026 hay que escribirla AL REV\u00c9S";
+      } else if (esAnuncio) {
+        badge.textContent = "\u2726 RONDA ESPECIAL \u2726";
+        txt.textContent = st.reglaActual ? st.reglaActual.texto : "";
+        txt.classList.remove("palabra-reves");
         document.getElementById("anuncio-count").textContent = st.anuncioSeg;
-      }
+        sub.textContent = "L\u00e9anla todos\u2026 la bomba sale a un jugador al azar";
+      } else txt.classList.remove("palabra-reves");
     }
 
     if (st.fase === "podio") {
@@ -1592,7 +1934,8 @@ const UI = {
     LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null; LOCAL.enSala = false;
     GAME.limpiarTimer(); GAME.ultimoNonce = {}; GAME.enPausa = false;
     GAME.orden = []; GAME.ordenIdx = 0;
-    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null };
+    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null, revesPalabra: null, revesSeg: null, ahoMask: null, ahoOpciones: null, ahoCompleta: null };
+    GAME.ahoPartida = new Set(); GAME.ahoPalabra = null; GAME.ahoReveladas = new Set();
     const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
     document.getElementById("app").classList.remove("hot-bg");
     this.ocultarBanner();
