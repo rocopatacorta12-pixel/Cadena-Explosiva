@@ -823,25 +823,25 @@ const GAME = {
 
   vivos() { return this.state.jugadores.filter(j => j.vidas > 0 && j.conectado); },
 
-  /* Nueva ronda: arranca en un jugador al azar (nunca el que acaba de jugar/explotar) y recorre a todos */
-  nuevaRonda(excluirId) {
+  /* Nueva ronda: orden 100% al azar (mezcla completa). TODOS los vivos entran una vez.
+     El primero puede ser cualquiera, incluso el último de la ronda anterior. */
+  nuevaRonda() {
     const ids = this.vivos().map(j => j.id);
-    if (!ids.length) { this.orden = []; this.ordenIdx = 0; return; }
-    let start = Math.floor(Math.random() * ids.length);
-    if (ids.length > 1 && ids[start] === excluirId) {
-      start = (start + 1 + Math.floor(Math.random() * (ids.length - 1))) % ids.length;
+    for (let i = ids.length - 1; i > 0; i--) {
+      const k = Math.floor(Math.random() * (i + 1));
+      const tmp = ids[i]; ids[i] = ids[k]; ids[k] = tmp;
     }
-    this.orden = ids.slice(start).concat(ids.slice(0, start));
+    this.orden = ids;
     this.ordenIdx = 0;
   },
-  /* Avanza al próximo del orden; si la ronda terminó, arma una nueva con arranque aleatorio y regla nueva */
+  /* Avanza al próximo del orden de ESTA ronda; recién cuando todos jugaron arma una ronda nueva al azar */
   proximoTurno(actualId) {
     for (let guard = 0; guard < 99; guard++) {
       this.ordenIdx++;
       if (this.ordenIdx >= this.orden.length) {
         if (!this.vivos().length) return null;
         this.state.ronda++;
-        this.nuevaRonda(actualId);
+        this.nuevaRonda();
         if (!this.orden.length) return null;
       }
       const id = this.orden[this.ordenIdx];
@@ -1128,10 +1128,15 @@ const GAME = {
       this.enPausa = false;
       if (this.state.fase !== "jugando") return;
       if (this.chequearFin()) return;
-      this.state.ronda++;
-      this.nuevaRonda(perdedorId);
+      // FIX: la explosión NO corta la ronda. Siguen los que todavía no jugaron.
+      const rondaAntes = this.state.ronda;
+      const sig = this.proximoTurno(perdedorId);
+      if (sig == null) { this.chequearFin(); return; }
       if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
-      this.prepararRonda(this.orden[0] || null);
+      if (this.state.ronda !== rondaAntes) { this.prepararRonda(sig); return; }
+      // misma ronda: consigna nueva (si era especial, se mantiene la regla de la ronda)
+      if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
+      this.pasarBombaA(sig);
     }, CFG.PAUSA_EXPLOSION_MS);
   },
 
