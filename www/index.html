@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v19 — Fin de partida para todos (volver/otro modo), Ahorcado con vidas escaladas + categoría + palabras largas, Mecha Compartida con reloj invisible, bonos por acierto y efectos de peligro. Base v18 Fase 3 — Nuevo modo AHORCADO EXPRÉS: palabra oculta, 4 opciones de letra por turno con timer, dificultad creciente por ronda, pool propio con rotación persistente. QA de los 3 modos en 0 fallas -->
+<!-- Cadena Explosiva v21 — Ahorcado: turno compacto que entra en pantalla sin scroll (dvh + safe areas), vidas 4–6 escaladas, red optimizada (ticks livianos, tipeo por evento con throttle, estado sin lista completa de usadas, render con memos). Base v19 — Fin de partida para todos (volver/otro modo), Ahorcado con vidas escaladas + categoría + palabras largas, Mecha Compartida con reloj invisible, bonos por acierto y efectos de peligro. Base v18 Fase 3 — Nuevo modo AHORCADO EXPRÉS: palabra oculta, 4 opciones de letra por turno con timer, dificultad creciente por ronda, pool propio con rotación persistente. QA de los 3 modos en 0 fallas -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -33,7 +33,12 @@ html, body {
   font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
   overflow-x: hidden;
 }
-#app { min-height: 100%; display: flex; flex-direction: column; padding: 20px 16px 32px; transition: background .3s; }
+#app { min-height: 100%; display: flex; flex-direction: column; padding: 20px 16px calc(18px + env(safe-area-inset-bottom, 0px)); transition: background .3s; }
+/* v21: alto REAL de la pantalla del celu (Android e iPhone): dvh sigue a las barras del navegador */
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
+  #app { min-height: 100dvh; }
+}
 #app.shake { animation: shake .5s; }
 #app.hot-bg { background: radial-gradient(circle at 50% 40%, rgba(255,87,34,.18), transparent 60%); }
 @keyframes shake {
@@ -159,6 +164,25 @@ input[type=text]:focus { border-color: var(--accent2); }
 .aho-op:active { transform: scale(.93); }
 .aho-op:disabled { filter: grayscale(.6) brightness(.6); }
 .aho-cat { text-align: center; font-size: .78rem; color: var(--accent2, #ffd166); opacity: .9; letter-spacing: .5px; margin-top: 6px; }
+/* v21: modo compacto en TU turno de Ahorcado — las 4 letras SIEMPRE entran en pantalla, sin deslizar */
+#app.aho-turno { padding-top: 6px; }
+#app.aho-turno .ronda-lbl { display: none; }
+#app.aho-turno .regla-box { display: none; }      /* la consigna se repite abajo, en el panel del turno */
+#app.aho-turno .quien-tiene { display: none; }
+#app.aho-turno .usadas { display: none; }
+#app.aho-turno .vidas-fila { display: none; }
+#app.aho-turno .bomba-zona { flex: 0 0 auto; justify-content: flex-start; gap: 4px; }
+#app.aho-turno .bomba-wrap { width: 52px; height: 52px; }
+#app.aho-turno .bomba-grande { font-size: 2rem; }
+#app.aho-turno .mecha { height: 12px; top: 0; }
+#app.aho-turno .turno-count { font-size: 1.6rem; min-height: 30px; }
+#app.aho-turno .aho-cat { margin-top: 2px; }
+#app.aho-turno .aho-mask { gap: 5px; }
+#app.aho-turno .aho-mask .aho-l { width: 25px; height: 34px; font-size: 1.1rem; }
+#app.aho-turno .turno-mio { margin-top: 6px; padding: 10px 12px; }
+#app.aho-turno .turno-mio .aviso { font-size: .95rem; margin-bottom: 4px; }
+#app.aho-turno .regla-mini { font-size: .85rem; padding: 6px 8px; margin-bottom: 6px; }
+#app.aho-turno .aho-op { min-height: clamp(48px, 8.5vh, 64px); font-size: 1.5rem; }
 /* toast chico de bono de tiempo (mecha): esquina superior izquierda, no tapa consigna ni teclado */
 .bono-toast {
   position: fixed; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 8px; z-index: 60;
@@ -836,8 +860,10 @@ const NET = {
     else if (msg.t === "input") {
       if (GAME.state.fase !== "jugando") return;
       if (msg.data.kind === "tipeando" && GAME.state.bombaEn === conn.peer) {
+        // v21: el tipeo en vivo viaja como evento chico, no como estado completo por cada tecla
         GAME.state.palabraActual = String(msg.data.texto || "").slice(0, 40);
-        this.broadcastState(); UI.render();
+        this.broadcastEvent("tipeo", { texto: GAME.state.palabraActual });
+        UI.renderPalabraLive();
       }
       else if (msg.data.kind === "pasar" && GAME.state.bombaEn === conn.peer) {
         GAME.intentarPasar(conn.peer, msg.data.texto, msg.data.nonce);
@@ -849,7 +875,19 @@ const NET = {
   },
 
   broadcastState() {
-    const paquete = { t: "state", full: GAME.state };
+    // v21: la lista completa de "usadas" crece toda la partida y no hace falta que viaje;
+    // se manda solo lo que se muestra (últimas 8) + el total. El host conserva la lista completa.
+    const st = GAME.state;
+    const full = (st.usadas && st.usadas.length > 8)
+      ? { ...st, usadas: st.usadas.slice(-8), usadasN: st.usadas.length }
+      : st;
+    const paquete = { t: "state", full };
+    this.conns.forEach(c => { try { if (c.open) c.send(paquete); } catch (e) {} });
+  },
+  /* v21: tick liviano de contadores (1/seg) — evita re-enviar todo el estado por cada segundo */
+  broadcastTick() {
+    const st = GAME.state;
+    const paquete = { t: "tick", data: { s: st.turnoSeg, a: st.anuncioSeg, r: st.revesSeg } };
     this.conns.forEach(c => { try { if (c.open) c.send(paquete); } catch (e) {} });
   },
   broadcastEvent(kind, data) {
@@ -922,6 +960,10 @@ const NET = {
 
   invitadoRecibe(msg) {
     if (msg.t === "pong") return;
+    if (msg.t === "tick") {   // v21: solo cambian los contadores → refresco liviano
+      GAME.state.turnoSeg = msg.data.s; GAME.state.anuncioSeg = msg.data.a; GAME.state.revesSeg = msg.data.r;
+      UI.renderTick(); return;
+    }
     if (msg.t === "state") {
       const faseAnterior = GAME.state.fase;
       const bombaAntes = GAME.state.bombaEn;
@@ -942,6 +984,7 @@ const NET = {
         const inp = document.getElementById("in-palabra");
         if (inp && !inp.value && UI.ultimaEnviada) inp.value = UI.ultimaEnviada;
       }
+      if (msg.kind === "tipeo") { GAME.state.palabraActual = String(msg.data.texto || "").slice(0, 40); UI.renderPalabraLive(); }
       if (msg.kind === "paso" && msg.data.id !== LOCAL.miId) AUDIO.pop();
       if (msg.kind === "bono") UI.mostrarBono(msg.data);
       if (msg.kind === "peligro") UI.efectoPeligro();
@@ -1078,7 +1121,7 @@ const GAME = {
         this.enPausa = false;
         if (this.state.reglaActual && this.state.reglaActual.tipo === "reves") this.mostrarPalabraReves(primeroId);
         else this.pasarBombaA(primeroId);
-      } else { AUDIO.tick(); NET.broadcastState(); UI.render(); }
+      } else { AUDIO.tick(); NET.broadcastTick(); UI.renderTick(); }
     }, 1000);
   },
   /* Muestra la palabra ~3s con contador común para TODOS; después la oculta y recién ahí sale la bomba */
@@ -1101,7 +1144,7 @@ const GAME = {
         this.state.revesPalabra = null; this.state.revesSeg = null;
         this.enPausa = false;
         this.pasarBombaA(sigId);
-      } else { AUDIO.tick(); NET.broadcastState(); UI.render(); }
+      } else { AUDIO.tick(); NET.broadcastTick(); UI.renderTick(); }
     }, 1000);
   },
   /* Continuación de turno dentro de la misma ronda (pase válido, explosión o desconexión) */
@@ -1135,9 +1178,9 @@ const GAME = {
     DICC.cargar();
     this.limpiarTimer(); this.enPausa = false; this.ultimoNonce = {};
     this.consignasPartida = new Set();
-    // vidas por modo: Ahorcado escala con la cantidad de jugadores; Clásico y Mecha siempre 3
+    // vidas por modo: Ahorcado escala con la cantidad de jugadores (mín 4, máx 6); Clásico y Mecha siempre 3
     const nJug = this.state.jugadores.length;
-    const vidasIni = this.state.modo === "ahorcado" ? (nJug < 5 ? 5 : (nJug <= 8 ? 4 : 3)) : CFG.VIDAS_INI;
+    const vidasIni = this.state.modo === "ahorcado" ? (nJug < 5 ? 6 : (nJug <= 8 ? 5 : 4)) : CFG.VIDAS_INI;
     this.state.jugadores.forEach(j => j.vidas = vidasIni);
     this.state.fase = "jugando"; this.state.ronda = 1; this.state.stats = {};
     this.state.turnoSeg = null; this.state.mechaFrac = null; this.state.anuncioSeg = null;
@@ -1294,7 +1337,7 @@ const GAME = {
       this.state.turnoSeg--;
       if (this.state.turnoSeg <= 0) { this.explota(); return; }
       if (this.state.bombaEn === LOCAL.miId && this.state.turnoSeg <= 3) AUDIO.tick();
-      NET.broadcastState(); UI.render();
+      NET.broadcastTick(); UI.renderTick();
     }, 1000);
   },
   intentarLetra(deId, letra, nonce) {
@@ -1752,6 +1795,10 @@ const UI = {
       // máscara de la palabra (solo modo ahorcado, la ven todos)
       const am = document.getElementById("aho-mask");
       if (am) {
+        // v21: memo — la máscara solo se re-arma si cambió
+        const maskKey = (st.modo === "ahorcado" && st.ahoMask) ? st.ahoMask : "";
+        if (this._maskKey !== maskKey) {
+        this._maskKey = maskKey;
         am.innerHTML = "";
         if (st.modo === "ahorcado" && st.ahoMask) {
           let huecoMarcado = false;
@@ -1764,6 +1811,7 @@ const UI = {
             am.appendChild(d);
           });
         }
+        }
       }
       // pista de categoría (solo ahorcado): orientación de lo que se busca
       const ac = document.getElementById("aho-cat");
@@ -1772,14 +1820,17 @@ const UI = {
       const pl = document.getElementById("palabra-live");
       pl.innerHTML = (!laTengoYo && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
       const us = document.getElementById("usadas");
-      us.textContent = (st.usadas && st.usadas.length)
-        ? `Ya dichas (${st.usadas.length}): ` + st.usadas.slice(-8).join(" \u00b7 ") + (st.usadas.length > 8 ? " \u00b7 \u2026" : "")
+      const usN = st.usadasN || (st.usadas ? st.usadas.length : 0);
+      us.textContent = usN
+        ? `Ya dichas (${usN}): ` + st.usadas.slice(-8).join(" \u00b7 ") + (usN > 8 ? " \u00b7 \u2026" : "")
         : "";
 
       const tm = document.getElementById("turno-mio");
       tm.style.display = laTengoYo ? "block" : "none";
       const esAho = st.modo === "ahorcado";
       document.getElementById("app").classList.toggle("teclado", laTengoYo && !esAho);
+      // v21: en TU turno de Ahorcado la pantalla se compacta para que las 4 letras entren sin scroll
+      document.getElementById("app").classList.toggle("aho-turno", laTengoYo && esAho);
       // en ahorcado no hay input ni teclado: 4 botones de letra
       const inpEl = document.getElementById("in-palabra");
       const tecEl = document.getElementById("teclado-propio");
@@ -1790,6 +1841,10 @@ const UI = {
       if (btnPasar) btnPasar.style.display = esAho ? "none" : "block";
       if (opCont) {
         opCont.style.display = esAho && laTengoYo ? "grid" : "none";
+        // v21: memo — no re-armar los 4 botones si son las mismas letras (render corre 1/seg)
+        const opKey = (esAho && laTengoYo && st.ahoOpciones) ? st.ahoOpciones.join("") : "";
+        if (this._opKey !== opKey) {
+        this._opKey = opKey;
         opCont.innerHTML = "";
         if (esAho && laTengoYo && st.ahoOpciones) {
           st.ahoOpciones.forEach(l => {
@@ -1800,6 +1855,7 @@ const UI = {
             b.addEventListener("pointerdown", (e) => { e.preventDefault(); UI.elegirLetra(l); });
             opCont.appendChild(b);
           });
+        }
         }
       }
       const aviso = tm.querySelector(".aviso");
@@ -1815,6 +1871,10 @@ const UI = {
       if (btnP && !laTengoYo) btnP.disabled = false;
 
       const vf = document.getElementById("vidas-fila");
+      // v21: memo — las fichas de vidas solo se re-arman si algo cambió
+      const vKey = st.jugadores.map(j => j.id + ":" + j.vidas + (j.id === st.bombaEn ? "H" : "") + (j.conectado ? "" : "X")).join("|");
+      if (this._vidasKey !== vKey) {
+      this._vidasKey = vKey;
       vf.innerHTML = "";
       st.jugadores.forEach(j => {
         const chip = document.createElement("div");
@@ -1823,9 +1883,11 @@ const UI = {
         chip.innerHTML = `<span class="av-real">${j.emoji}</span> <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
         vf.appendChild(chip);
       });
+      }
     } else {
       document.getElementById("app").classList.remove("hot-bg");
       document.getElementById("app").classList.remove("teclado");
+      document.getElementById("app").classList.remove("aho-turno");
     }
 
     /* anuncio a pantalla completa de ronda especial (para todos, con cuenta regresiva) */
@@ -1933,11 +1995,46 @@ const UI = {
     this.vibrar(10);
     this.notificarTipeo();
   },
+  _tipeoTimer: null, _tipeoUltimo: 0,
   notificarTipeo() {
     const inp = document.getElementById("in-palabra");
-    const texto = inp ? inp.value : "";
-    if (LOCAL.soyHost) { GAME.state.palabraActual = texto.slice(0, 40); NET.broadcastState(); }
-    else NET.enviarInput({ kind: "tipeando", texto });
+    const texto = (inp ? inp.value : "").slice(0, 40);
+    if (LOCAL.soyHost) {
+      GAME.state.palabraActual = texto;
+      NET.broadcastEvent("tipeo", { texto });   // v21: evento chico, no el estado completo por tecla
+      return;
+    }
+    // v21: como mucho un mensaje cada 90ms, con envío final asegurado (el último tipeo siempre llega)
+    const mandar = () => {
+      this._tipeoUltimo = Date.now(); this._tipeoTimer = null;
+      const i = document.getElementById("in-palabra");
+      NET.enviarInput({ kind: "tipeando", texto: (i ? i.value : "").slice(0, 40) });
+    };
+    if (Date.now() - this._tipeoUltimo >= 90) mandar();
+    else { clearTimeout(this._tipeoTimer); this._tipeoTimer = setTimeout(mandar, 90); }
+  },
+  /* v21: refrescos livianos (solo lo que cambió, sin re-armar toda la pantalla) */
+  renderPalabraLive() {
+    const st = GAME.state;
+    const pl = document.getElementById("palabra-live");
+    if (!pl) return;
+    pl.innerHTML = (st.bombaEn !== LOCAL.miId && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
+  },
+  renderTick() {
+    const st = GAME.state;
+    if (st.fase !== "jugando") return;
+    const tc = document.getElementById("turno-count");
+    if (tc) {
+      if (st.modo === "ahorcado" && st.turnoSeg != null && st.bombaEn) {
+        tc.textContent = "\u23F1\uFE0F " + st.turnoSeg + "s";
+        tc.className = "turno-count " + (st.turnoSeg <= 3 ? "critico" : st.turnoSeg <= 5 ? "medio" : "ok");
+      } else { tc.textContent = ""; tc.className = "turno-count"; }
+    }
+    const cnt = document.getElementById("anuncio-count");
+    if (cnt) {
+      if (st.anuncioSeg != null) cnt.textContent = st.anuncioSeg;
+      else if (st.revesSeg != null) cnt.textContent = st.revesSeg;
+    }
   },
 
   ultimaEnviada: "",
