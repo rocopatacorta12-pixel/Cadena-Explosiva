@@ -96,3 +96,11 @@ Clásico, Mecha Compartida, Ahorcado, Reflejos, Trivia, Oráculo, protocolo Peer
 - 3.er giro opcional de memoria: eco invertido (repetir al revés en rondas altas) o paso solo-audio.
 - Temporizador de mezcla configurable por dificultad; skin de paneles (formas además de color, para daltonismo).
 - Sonido de "mezcla" propio y vibración diferenciada al completar la cadena.
+
+## v29 — Reconexión al minimizar (host e invitados)
+- **Bug raíz del avatar duplicado**: al minimizar, Android corta el WebSocket con el servidor de señalización de PeerJS; al volver, `peer.reconnect()` vuelve a disparar `open` y el handler del host hacía `push` del anfitrión otra vez. Ahora el handler de `open` deduplica (solo agrega si el id no está).
+- **Host — recuperación automática**: peer host refactorizado en `_armarPeerHost(esNueva)`. Con sala viva (`_salaViva()`): error `network`/`server-error` ya NO expulsa de la sala; muestra "Reconectando con el servidor…" y reintenta con backoff (800ms→8s, `_reintentarPeerHost`). `unavailable-id` con sala viva reintenta con el MISMO código (la sesión vieja tarda en soltarse) en vez de regenerar código.
+- **visibilitychange**: al volver a primer plano, `NET.alVolverVisible()` — host: reconnect si `disconnected`, recrea el peer con el mismo id si `destroyed`; invitado: reconnect, o re-unión completa si el peer se destruyó (cerrando antes la conexión vieja al host).
+- **Invitado**: `open` tras reconnect ya no abre una segunda conexión si la directa con el host sigue viva.
+- **join con id nuevo**: si un invitado vuelve con otro peer id (peer destruido en segundo plano), el host reusa su jugador huérfano (mismo nombre+emoji desconectado): migra id, stats y `bombaEn` — sin duplicados, y puede re-entrar aunque la partida ya haya arrancado.
+- QA: 28 checks de reconexión (11 escenarios) + regresión de 22 partidas completas × 12 corridas (264 partidas, 7 modos, con fuzz de inputs y desconexiones a mitad de partida) — 0 fallas.
