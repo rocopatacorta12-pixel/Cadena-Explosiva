@@ -1,4 +1,4 @@
-# HANDOFF — Cadena Explosiva v27 (auditada)
+# HANDOFF — Cadena Explosiva v28
 
 Juego P2P de fiesta para celulares (PeerJS, un solo `index.html`, sin backend propio): una bomba pasa de mano en mano y explota en la cara del que falla. **7 modos**, host autoritario, espectadores en vivo, podio + revancha.
 
@@ -68,9 +68,18 @@ Harness con reloj virtual (`setTimeout`/`setInterval` falsos), DOM stub, Peer st
 
 Nota menor (aceptada, no es fuga): `memFlashExterno`/`memFlashLocal` usan `setTimeout` de 200–520 ms no registrados en `_memTimers`; solo togglean una clase sobre un nodo capturado y no se acumulan.
 
-## Cambio de assets (v27)
+## Cambio de assets (v28)
 
-- `img/animales/24_pato.png` (y su copia en `www/`) reemplazado por la ilustración nueva: se removió el fondo cuadriculado horneado de la imagen original, se aplicó fondo claro consistente con el resto del set y se redimensionó a 144×144.
+- **Los 34 avatares de `img/animales/` fueron reemplazados** por el set nuevo estilo sticker (144×144, fondo sólido). La **mariposa salió** del set y entró el **tiburón** en su lugar (34 animales igual).
+- **Reordenamiento por color:** los avatares con fondos parecidos (azules marinos: tiburón/ballena/delfín/pato/pingüino/lobo/lechuza/pulpo/elefante; verdes: vaca/caballo/oso/panda/mono/rana/koala/trex/tortuga/zorro; cálidos: gallina/tigre/cerdo/gato/erizo/hámster/jirafa/león; morados/grises: cebra/unicornio/conejo/ratón/águila/dragón/perro) se intercalaron en round-robin para que nunca queden dos paletas iguales juntas — ni horizontal ni verticalmente en una grilla de 6 columnas. El orden vive solo en `CFG.EMOJIS` (un solo lugar); los archivos se renombraron `NN_nombre.png` acorde. El **zorro es el avatar #1** (default de perfil nuevo).
+- El avatar no se persiste en `localStorage`, así que el renombrado no rompe perfiles guardados; el default (`CFG.EMOJIS[0]`) sigue siendo válido.
+
+## QA extra de v28
+
+- `CFG.EMOJIS`: 34 entradas únicas, todas con archivo existente en `img/animales/` y `www/img/animales/` (verificado programáticamente).
+- Regla de separación de color verificada por script: sin vecinos de la misma paleta ni horizontales ni verticales (grilla ×6).
+- `node --check` OK sobre el script completo; `index.html` raíz idéntico a `www/index.html`.
+- Suite completa de 7 escenarios re-corrida ×3 sobre el build v28: 435/448/501 checks, **0 fallas**.
 
 ## Qué NO se tocó
 
