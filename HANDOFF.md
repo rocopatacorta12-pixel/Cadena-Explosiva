@@ -1,49 +1,89 @@
-# HANDOFF — Cadena Explosiva v26 (OPTIMIZADA, QA en 0 fallas)
+# HANDOFF — Cadena Explosiva v27 (auditada)
 
-## Qué es
-Juego HTML multijugador online (2-12 jugadores) tipo "pasar la bomba". Single-file (`index.html`), sin frameworks, PeerJS (WebRTC P2P, cloud gratuito). El HOST es la única fuente de verdad: los invitados mandan inputs con nonce y el host retransmite el estado completo. Texto visible 100% en rioplatense (voseo). Mobile-first ~360px. Se publica en GitHub Pages (repo `rocopatacorta12-pixel/Cadena-Explosiva`) + APK debug vía GitHub Actions con Capacitor 6. Rafa trabaja desde la GUI web de GitHub y un celu Android: **entregar SIEMPRE archivos completos, jamás fragmentos ni diffs**.
+Juego P2P de fiesta para celulares (PeerJS, un solo `index.html`, sin backend propio): una bomba pasa de mano en mano y explota en la cara del que falla. **7 modos**, host autoritario, espectadores en vivo, podio + revancha.
 
-## Estado actual: v25 FINAL — 6 modos verificados
-1. **CLÁSICO** — palabras con consignas, especiales y "al revés".
-2. **MECHA COMPARTIDA** — reloj invisible compartido, bonos por acierto.
-3. **AHORCADO EXPRÉS** — palabra oculta, 4 opciones de letra con timer, vidas escaladas 4-6.
-4. **DUELO DE REFLEJOS** — 27 microjuegos, historial anti-repetición 14.
-5. **TRIVIA CON BOMBA** (nuevo, Kimi K3 + cirugía) — pregunta con 3-4 opciones y contador (13/12/11s según tanda); error o timeout = explosión. Pools: `TRV_FACIL` 180 · `TRV_MEDIA` 120 · `TRV_DIFICIL` 100 (400 en total, auditadas: sin duplicadas, opciones únicas, correcta = primer elemento de cada entrada, se baraja al generar y la solución vive solo en el host como `trvSol`). Dificultad creciente cada 2 rondas (r1-2 fácil → r9+ solo difícil). Rotación persistente en localStorage (`cadena_uso_trv_v1`). Los espectadores ven pregunta + opciones en `#trv-info` (render con memo).
-6. **EL ORÁCULO MIENTE** (nuevo, Kimi K3 + cirugía) — 5 rondas: voto secreto + justificación anónima (≤60 chars) → las justificaciones se mezclan con 1-3 frases falsas del Oráculo → adivinar autores. Puntos: +2 autor real, +3 falsa detectada, +1 al autor por cada engañado, +2 al más votado. Podio por puntos. Pools: `ORA_PREGUNTAS` 200 · `ORA_FALSAS` 60 (con hueco `{n}` que el host rellena), rotación persistente (`cadena_uso_ora_v1`). Mínimo 3 jugadores: deshabilitado en el lobby **y con guardia host-side en `empezar()`** (fix v25). Etapas avanzan por timer visible (tick campo `o`) o antes si todos respondieron; desconexiones destraban la etapa.
+## Modos actuales
 
-## Auditoría v24 → v25 (entrega de Kimi)
-- Diff completo contra la v24: **solo agregados y adaptaciones quirúrgicas**; los 4 modos viejos quedaron intactos (verificado por diff línea a línea y por regresión simulada).
-- Arquitectura respetada: host genera y valida todo, inputs con nonce, broadcast de estado completo, render con memos (`_tvKey`, `_tiKey`, `_oraKey`), sin archivos/CDNs nuevos, rutas `dicc.txt` / `img/` intactas, voseo en todos los textos nuevos.
+| # | Modo | Clave | Mín. jug. | Idea |
+|---|------|-------|-----------|------|
+| 1 | 💣 Clásico | `clasico` | 2 | Palabra según sílaba/regla antes de que explote (reloj oculto) |
+| 2 | 🕯️ Mecha Compartida | `mecha` | 2 | Cada acierto suma segundos al reloj visible |
+| 3 | 🔤 Ahorcado Exprés | `ahorcado` | 2 | Adiviná la próxima letra entre 4 opciones |
+| 4 | ⚡ Duelo de Reflejos | `reflejos` | 2 | 27 microjuegos relámpago |
+| 5 | ❓ Trivia con Bomba | `trivia` | 2 | 4 opciones, dificultad creciente (pools 180/120/100) |
+| 6 | 🧠 A Ver Si Te Acordás | `memoria` | 2 | **NUEVO v27** — Simon con bomba + 2 giros únicos |
+| 7 | 🔮 El Oráculo Miente | `oraculo` | 3 (guardia lobby+host) | Social: voto secreto, excusas, desenmascarar |
 
-## Bugs encontrados y corregidos en la cirugía v25
-1. `TRV_MEDIA`: "¿Quién cantó La voz de los 80…?" atribuía a Los Redondos un tema de Los Prisioneros (Chile). Reemplazada por "¿Qué banda argentina lideraba el Indio Solari?" (misma respuesta y distractores).
-2. `TRV_MEDIA`: redacción confusa "¿Qué sangre lleva oxígeno…?" → "¿Qué vasos llevan la sangre con oxígeno…?" (distractor "Los glóbulos" → "Los nervios").
-3. `TRV_FACIL`: "La ananá" → "El ananá" (rioplatense).
-4. `GAME.empezar()`: faltaba la guardia host-side del Oráculo con <3 conectados (el lobby lo bloquea, pero si alguien se desconectaba con el modo ya elegido, arrancaba igual con 2).
+## El modo nuevo: `memoria` (v27)
 
-## QA (headless, Node: stub de DOM + timers falsos)
-- Unitarios TRV: ~3.600 generaciones (solución en rango y coincidente con la correcta, opciones únicas, segundos 8-20, escala de dificultad, rotación sin repetir hasta agotar la tanda).
-- Unitarios ORA: `cantFalsas` en rango 1-3, 500 `fraseFalsa` sin huecos `{n}`, `mezclar` sin pérdidas.
-- Validación del host: respuestas de no-portador ignoradas, nonce anti-doble-envío, incorrecta/timeout explota, voto a jugador inexistente / justificación corta / doble voto / mapa incompleto / candidato inválido rechazados, recorte a 60 chars, **puntaje del Oráculo verificado contra cálculo determinista** (incluido bonus del más votado).
-- Partidas simuladas: 2-12 jugadores, fallos aleatorios, timeouts, desconexiones (incluido quien tiene la bomba), en los 6 modos; siempre se llega al podio, sin bomba en mano ni timers vivos después del podio. **9 corridas limpias consecutivas, ~22.600 checks por corrida (~204.000 en total), 0 fallas** + corrida final sobre el archivo empaquetado.
-- Nota: la Mecha con 7+ jugadores dura mucho por diseño (verificado idéntico en v24, no es regresión).
+**Flujo del turno (host):** `arrancarMemoria()` → etapa `ver` (la cadena se ilumina sola, la ven TODOS con el mismo timing) → si `traic`, etapa `mezclar` (los paneles cambian de lugar con animación) → etapa `toca` (el portador repite; cada toque se valida y se broadcastea como evento `memtoque` para que todos lo vean en vivo).
 
-## Estructura del ZIP (obligatoria)
-`index.html` + `dicc.txt` + `img/` + `manifest.json` + íconos en la raíz (Pages) · `www/` con el mismo contenido (APK) · `capacitor.config.json`, `package.json`, `assets/`, `.github/workflows`. **Raíz y `www/` tienen que quedar IDÉNTICOS siempre** (index.html e img/ verificados byte a byte en esta entrega).
+- **Cadena** (`GAME.memSeq`): empieza en 3 (`CFG.MEM_LEN_INI`), crece **+1 por acierto** (`memExtender`), vuelve a 3 tras explosión (`memNuevaSeq` en `explota`).
+- 👻 **Color Señuelo** (desde len ≥ `MEM_SEN_DESDE` = 4): se elige un color fantasma, se inyecta una aparición extra en lo mostrado (`state.mem.ver`) y se anuncia. El objetivo (`memObjetivo`) = la cadena **sin NINGUNA aparición de ese color** (filtrado por color, no por posición; se garantizan ≥ 2 toques válidos vía `cands`).
+- 🔀 **Paneles Traicioneros** (desde len ≥ `MEM_TRAIC_DESDE` = 6): tras mostrar, `state.mem.orden` se baraja (garantizado ≠ identidad) y todos ven la animación `memHop`.
+- **Reloj:** `turnoSeg = MEM_SEG_BASE (5) + ceil(len * MEM_SEG_PASO (1,5))`; intervalo `memInt` con `broadcastTick` (mismo patrón que trivia).
+- **Validación:** `intentarMemoria(deId, a, nonce)` — guardas: modo/fase/portador/etapa `toca`/nonce/regex `[0-5]`; mal → `memtoque{ok:false}` + `explota()`; bien → `memtoque{ok:true}` + progreso; completa → `pasadas++`, evento `paso`, cadena +1, `pasarBombaA(sig)`.
 
-## Reglas de trabajo para el próximo chat
-1. Archivos COMPLETOS siempre; QA hasta 0 fallas antes de entregar.
-2. Todo texto visible en rioplatense (voseo).
-3. Host valida todo; invitados solo mandan inputs con nonce.
-4. Render ~1/seg con memos: no re-armar DOM si no cambió la clave.
-5. Pantallas que entren en ~360px sin scroll.
+## Arquitectura (qué toca cada capa para un modo nuevo)
 
-## v26 — Optimización anti-ralentización en celus gama baja (sin tocar lógica)
-Síntoma reportado: en partidas largas (15-20+ min) un celu gama baja empezaba a "transmitir" cada vez más lento. Causa: acumulación de basura + bola de nieve de renders. Cirugías (5, diff total ~57 líneas):
-1. **Audio (la fuga principal):** cada sonido creaba Oscillator+Gain conectados al grafo y NUNCA se desconectaban → miles de nodos vivos tras 20 min en WebViews viejos. Ahora `onended → disconnect()`.
-2. **Explosión:** el buffer de ruido se creaba nuevo por cada explosión; ahora se genera una vez y se cachea (`AUDIO._noise`).
-3. **Coalescing de estados en el invitado (NET.invitadoRecibe):** si llegan varios `state` casi juntos (celu atrasado), se aplican todos pero se PINTA una sola vez por frame (rAF + fallback 250ms para segundo plano). Antes cada mensaje re-armaba todo el DOM: render lento → cola más larga → más lento (la bola de nieve que veía el gama baja). La lógica de "me tocó la bomba" sigue siendo por mensaje.
-4. **Memo de la lista del lobby (`UI._lobbyKey`):** se re-armaba el DOM completo del lobby en CADA render, incluso durante la partida. Ahora solo si cambia jugadores/modo/fase.
-5. **Memo de `renderPalabraLive` (`UI._plKey`):** una escritura de innerHTML por cada tecla de cualquier jugador; ahora solo si el texto cambió. Ambos memos se limpian en el reset junto a `_tvKey`/`_tiKey`.
+1. **CFG:** constantes del modo (tuning en un solo lugar).
+2. **Estado público** `GAME.state.*` (viaja por `state` full): `mem: { etapa, ver, sen, orden, len, progreso, traic }` + `turnoSeg`.
+3. **Estado privado del host:** `memSeq`, `memObjetivo`, `memIdx`, timers (`memInt`, `_memT`, `_memT2`) — limpiados todos en `limpiarTimer`.
+4. **Red (NET):** entrada `kind:"mem"` en `hostRecibe` (con guarda `bombaEn === conn.peer`); eventos salientes `memtoque`/`paso`/`invalida`/`explosion`; en `invitadoRecibe` el evento actualiza `state.mem.progreso` y flashea el panel.
+5. **UI:** `renderMem()` (memo por `_memKey = etapa|ver|sen|orden|bombaEn|ronda` — la animación NO se reinicia en re-renders), `renderMemInfo()` (memo por texto), `memAnimarVer()` (mismo timing en todos los celus, tonos por color), `memAnimarMezcla()`, `memElegir()` (flash local + nonce + `enviarInput`), `memFlashExterno()`. Compactación `#app.mem-turno` (patrón copiado de `trv-turno`). `pintarTurnoCount` incluye memoria. `reset()` limpia todo lo del modo.
+6. **Puntos de integración** (buscarlos para futuros modos): `prepararRonda`, `continuarTurno`, `pasarBombaA`, `empezar`, `explota`, `chequearFin`, `volverAlLobby`, `UI.reset`, `MODOS_UI`, `NOMBRES`, tarjeta del lobby, CSS compacto.
 
-QA v26 (headless, Node, DOM/Peer/Audio stubbeados, timers falsos): 18 partidas por corrida en los 6 modos (2-6 jugadores) hasta podio, 9 corridas limpias; fase 2 (×3): maratón de 4 partidas seguidas por modo con intervalos acotados, desconexiones (incluido el portador de la bomba), ráfaga de 30 estados → ≤6 renders (coalescing verificado), memos del lobby y palabra-live invalidándose correcto, nonce anti-doble intacto, y **100% de nodos de audio desconectados** tras todas las corridas. 0 fallas.
+## Invariantes que NO hay que romper
+
+- **El host valida todo:** ningún invitado decide aciertos, explosiones ni turnos. Toda entrada lleva nonce anti-doble (`ultimoNonce`).
+- `limpiarTimer` debe limpiar TODOS los timers del modo (intervalos y timeouts) — el QA verifica que queden en `null` en cada podio.
+- **Memo de render:** nunca re-armar DOM que corre animación si la clave no cambió (el render corre 1/seg por los ticks).
+- **Regla de oro mobile:** en el turno del jugador, TODO lo interactivo entra sin scroll (clases `*-turno` + `max-height: 620px`).
+- Los eventos efímeros (`memtoque`, `invalida`, `paso`…) **no van en el state full**; van aparte y cada cliente los refleja localmente.
+- **No tocar** el bloque `--vhreal`/`visualViewport` ni el CSS `trv-turno`.
+
+## Auditoría de esta entrega (v27 vs v26.1)
+
+- **Archivo completo:** 4831 líneas / 299.785 bytes, sin cortes ni "resto igual". `node --check` OK.
+- **Solo 13 funciones compartidas cambiaron**, todas con hooks puramente aditivos del modo memoria: `chequearFin`, `continuarTurno`, `empezar`, `explota`, `hostRecibe`, `invitadoRecibe`, `limpiarTimer`, `pasarBombaA`, `pintarTurnoCount`, `prepararRonda`, `render`, `reset`, `volverAlLobby`. Ningún cambio de lógica en los 6 modos existentes.
+- **Host-autoridad verificada:** los invitados solo mandan `{kind:"mem", a, nonce}` vía `enviarInput`; `hostRecibe` guarda `bombaEn === conn.peer`; toda la generación y validación vive en el host.
+- **CSS crítico intacto:** las 21 reglas `trv-turno` y los 5 usos de `--vhreal` de v26.1 se conservan tal cual; el bloque `visualViewport` es idéntico.
+- **Optimización verificada:** `renderMem` memoizado (`_memKey`), animación solo cuando cambia la clave; timers de animación en `_memTimers` limpiados por `_memLimpiarTimers`; `AUDIO.tono` desconecta nodos WebAudio en `onended` (patrón v26); `memInt`/`_memT`/`_memT2` en `limpiarTimer` y `reset`.
+- **Layout compacto:** `#app.mem-turno` oculta ronda/regla-box/quién-tiene/usadas/vidas y (en `@media max-height:620px`) la bomba; pads con `clamp` de alto. A 620px el turno ocupa ~240px verticales: entra sin scroll.
+
+## QA de esta versión (harness propio, headless en Node)
+
+Harness con reloj virtual (`setTimeout`/`setInterval` falsos), DOM stub, Peer stub y bots que juegan **solo con información pública** (reconstruyen el objetivo filtrando el fantasma de `state.mem.ver` — valida que la regla sea justa para un humano).
+
+**3 corridas completas × 7 escenarios — 415/448/468 checks, 0 fallas:**
+
+- **S1:** 2 jugadores, partida entera mezclando aciertos y errores; crecimiento exacto +1 de la cadena; señuelo desde len 4 (objetivo sin el fantasma, fantasma visible en `ver`, ≥2 toques válidos, bot público reconstruye el objetivo); traicioneros desde len 6; fórmula del reloj; podio; **revancha** re-arranca memoria y **"otro modo"** vuelve al lobby limpio.
+- **S2:** 5 jugadores con timeouts (pierde vida, cadena vuelve a 3), toques erróneos y **desconexión del portador en `ver` y en `toca`** — la partida siempre siguió y llegó al podio.
+- **S3:** 12 jugadores; **nonce duplicado rechazado**, toque **fuera de fase** ignorado, toque de **no-portador** ignorado, inputs inválidos (`"9"`, `"banana"`, `null`) ignorados sin explotar; podio.
+- **S4 (regresión):** clásico, mecha, ahorcado, reflejos y trivia arrancan y llegan al podio solo por timeouts, sin timers de modo colgados.
+- **S5:** render de portador y espectador en las 3 etapas (`ver`, `mezclar`, `toca`) sin excepciones.
+- **S6:** semántica de la entrada de red `kind:"mem"`: el no-portador no avanza progreso, el portador valida; lobby limpio al salir.
+- **S7:** caída del **host** con memoria activa (lado invitado): `hostSeCayo` no lanza excepciones.
+- **En todos los podios:** `memInt`, `_memT` y `_memT2` en `null` (sin timers colgados).
+
+Nota menor (aceptada, no es fuga): `memFlashExterno`/`memFlashLocal` usan `setTimeout` de 200–520 ms no registrados en `_memTimers`; solo togglean una clase sobre un nodo capturado y no se acumulan.
+
+## Cambio de assets (v27)
+
+- `img/animales/24_pato.png` (y su copia en `www/`) reemplazado por la ilustración nueva: se removió el fondo cuadriculado horneado de la imagen original, se aplicó fondo claro consistente con el resto del set y se redimensionó a 144×144.
+
+## Qué NO se tocó
+
+Clásico, Mecha Compartida, Ahorcado, Reflejos, Trivia, Oráculo, protocolo PeerJS, podio, premios, revancha, salas, sonidos generales, diccionario (`dicc.txt`), workflow de GitHub Actions, íconos, manifest, capacitor.
+
+## Cómo probarlo en 30 segundos
+
+1. Abrí `index.html` (con internet para el CDN de PeerJS), creá sala y entrá con otro celu/pestaña.
+2. Elegí 🧠 **A VER SI TE ACORDÁS** y arrancá.
+3. Turnos 1–2: cadena de 3, sin giros. Desde la cadena 4 aparece el 👻 **fantasma**; desde la 6, los 🔀 **paneles se mueven**. Mirá cómo el otro celu ve la secuencia y tus toques en vivo.
+
+## Candidatos para v28 (ideas, sin implementar)
+
+- 3.er giro opcional de memoria: eco invertido (repetir al revés en rondas altas) o paso solo-audio.
+- Temporizador de mezcla configurable por dificultad; skin de paneles (formas además de color, para daltonismo).
+- Sonido de "mezcla" propio y vibración diferenciada al completar la cadena.
