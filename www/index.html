@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v21 — Ahorcado: turno compacto que entra en pantalla sin scroll (dvh + safe areas), vidas 4–6 escaladas, red optimizada (ticks livianos, tipeo por evento con throttle, estado sin lista completa de usadas, render con memos). Base v19 — Fin de partida para todos (volver/otro modo), Ahorcado con vidas escaladas + categoría + palabras largas, Mecha Compartida con reloj invisible, bonos por acierto y efectos de peligro. Base v18 Fase 3 — Nuevo modo AHORCADO EXPRÉS: palabra oculta, 4 opciones de letra por turno con timer, dificultad creciente por ronda, pool propio con rotación persistente. QA de los 3 modos en 0 fallas -->
+<!-- Cadena Explosiva v25 FINAL — 6 modos QA en 0 fallas: CLÁSICO, MECHA COMPARTIDA, AHORCADO EXPRÉS, DUELO DE REFLEJOS (27 microjuegos), TRIVIA CON BOMBA (pools 180/120/100 con dificultad creciente y rotación persistente; host genera y valida, espectadores ven la pregunta en #trv-info) y EL ORÁCULO MIENTE (voto secreto + justificación anónima + adivinar autores con frases falsas; pools 200 preguntas + 60 falsas; podio por puntos; mínimo 3 jugadores con guardia en lobby Y en el host). Auditoría v24→v25 sin regresiones + cirugía: pregunta errónea de TRV_MEDIA corregida (La voz de los 80 era de Los Prisioneros), redacción de arterias, "El ananá" rioplatense y guardia host-side del Oráculo con <3 conectados. QA headless: unitarios de generadores TRV/ORA, validación del host (nonce, no-portador, votos/mapas inválidos, puntaje determinista), ~2M de checks en 9 corridas limpias de partidas simuladas de 2-12 jugadores con fallos, timeouts y desconexiones (incluido el portador) en los 6 modos, siempre llegando al podio. Base v24 — FASE B: Duelo de Reflejos 27 microjuegos. Base v21 — Ahorcado Exprés compacto. Base v19 — Fin de partida para todos + Mecha Compartida. -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -93,6 +93,11 @@ input[type=text]:focus { border-color: var(--accent2); }
           drop-shadow(0 -1px 1px rgba(255,255,255,.18));
   text-shadow: 0 1px 2px rgba(0,0,0,.4);
 }
+.av-img { width: 1.35em; height: 1.35em; object-fit: contain; vertical-align: -0.3em;
+  filter: saturate(1.15) contrast(1.05) drop-shadow(0 2px 2px rgba(0,0,0,.5)); }
+.emoji-op .av-img { width: 42px; height: 42px; vertical-align: middle; }
+.bomba-img { height: 1.25em; width: auto; display: block; margin: 0 auto;
+  filter: drop-shadow(0 0 18px rgba(255,87,34,.5)); }
 .emoji-op:active { transform: scale(.9); }
 .emoji-op.sel { border-color: var(--accent2); background: #2c2750; transform: scale(1.08); }
 
@@ -126,7 +131,7 @@ input[type=text]:focus { border-color: var(--accent2); }
 
 /* ---- SELECTOR DE MODO ---- */
 .modo-sel { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-.modo-sel .modo-op { flex: 1 1 30%; min-width: 30%; }
+.modo-sel .modo-op { flex: 1 1 45%; min-width: 45%; }
 .modo-op {
   flex: 1; background: var(--card); border: 2px solid #2c2750; border-radius: 14px;
   padding: 12px 10px; text-align: center; cursor: pointer; transition: border-color .2s, transform .12s;
@@ -183,6 +188,39 @@ input[type=text]:focus { border-color: var(--accent2); }
 #app.aho-turno .turno-mio .aviso { font-size: .95rem; margin-bottom: 4px; }
 #app.aho-turno .regla-mini { font-size: .85rem; padding: 6px 8px; margin-bottom: 6px; }
 #app.aho-turno .aho-op { min-height: clamp(48px, 8.5vh, 64px); font-size: 1.5rem; }
+/* ---- MODO DUELO DE REFLEJOS ---- */
+.rf-info { text-align: center; font-size: .85rem; color: var(--accent2); margin-top: 4px; min-height: 0; }
+.rf-zona { margin-top: 10px; }
+.rf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.rf-grid3 { grid-template-columns: repeat(3, 1fr); }
+.rf-color { min-height: 58px; border-radius: 14px; border: 2px solid rgba(255,255,255,.15); cursor: pointer; transition: transform .1s; }
+.rf-tile { min-height: 52px; border-radius: 12px; font-size: 1.6rem; background: var(--card); border: 2px solid #2c2750; cursor: pointer; transition: transform .1s; }
+.rf-op { min-height: 58px; border-radius: 14px; font-size: 1.4rem; font-weight: 900; color: #fff; background: var(--card); border: 2px solid #2c2750; cursor: pointer; transition: transform .1s; }
+.rf-color:active, .rf-tile:active, .rf-op:active { transform: scale(.93); }
+.rf-hold { width: 100%; min-height: 92px; border-radius: 16px; font-size: 1.05rem; font-weight: 900; color: #fff; background: var(--accent); border: none; cursor: pointer; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.rf-hold.apretado { filter: brightness(1.25); transform: scale(.97); }
+.rf-contador { font-size: 2.2rem; background: var(--card); border: 2px solid var(--accent2); }
+.rf-swipe, .rf-quieto { min-height: 130px; border-radius: 16px; background: var(--bg2); border: 2px dashed #2c2750; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.rf-flecha { font-size: 2.6rem; }
+.rf-swipe-txt { color: var(--muted); font-size: .8rem; text-align: center; }
+.rf-campo { font-size: 1.35rem; line-height: 1.5; text-align: center; letter-spacing: 2px; word-break: break-all; margin-bottom: 8px; }
+.rf-pad { min-height: 58px; border-radius: 14px; border: 2px solid rgba(255,255,255,.12); opacity: .4; transition: opacity .12s, transform .12s; cursor: pointer; }
+.rf-pad.on { opacity: 1; transform: scale(1.05); box-shadow: 0 0 14px rgba(255,255,255,.35); }
+.rf-pad:disabled { cursor: default; }
+.rf-palabra { text-align: center; font-size: 1.8rem; font-weight: 900; letter-spacing: 4px; color: var(--accent2); margin-bottom: 6px; text-transform: uppercase; }
+.rf-barra { width: 70%; height: 8px; border-radius: 6px; background: #2c2750; overflow: hidden; }
+.rf-grande { text-align: center; font-size: 3rem; line-height: 1.2; margin-bottom: 8px; }
+.rf-tile.sel, .rf-op.sel { border-color: var(--ok); box-shadow: 0 0 10px rgba(76,217,100,.45); opacity: .85; }
+.rf-lado { min-height: 84px; border-radius: 14px; font-size: 1.15rem; line-height: 1.35; background: var(--card); border: 2px solid #2c2750; color: #fff; cursor: pointer; transition: transform .1s; word-break: break-all; padding: 8px; }
+.rf-lado:active { transform: scale(.95); }
+.rf-sem { min-height: 130px; border-radius: 16px; background: #4a1520; border: 2px solid #b3273a; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; touch-action: none; user-select: none; -webkit-user-select: none; transition: background .15s, border-color .15s; }
+.rf-sem.verde { background: #123c22; border-color: var(--ok); }
+.rf-frenar { min-height: 110px; border-radius: 16px; background: var(--bg2); border: 2px dashed #2c2750; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; touch-action: none; user-select: none; -webkit-user-select: none; padding: 12px; }
+.rf-pista { position: relative; width: 92%; height: 22px; border-radius: 8px; background: #2c2750; overflow: hidden; }
+.rf-zona-ok { position: absolute; top: 0; bottom: 0; background: rgba(76,217,100,.55); }
+.rf-aguja { position: absolute; top: -2px; bottom: -2px; width: 5px; margin-left: -2px; background: #fff; border-radius: 3px; box-shadow: 0 0 6px rgba(255,255,255,.8); left: 0; }
+.rf-barra-in { height: 100%; width: 100%; background: var(--ok); transform-origin: left; animation: rfBarra linear forwards; }
+@keyframes rfBarra { from { transform: scaleX(0); } to { transform: scaleX(1); } }
 /* toast chico de bono de tiempo (mecha): esquina superior izquierda, no tapa consigna ni teclado */
 .bono-toast {
   position: fixed; top: calc(env(safe-area-inset-top, 0px) + 8px); left: 8px; z-index: 60;
@@ -352,6 +390,53 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 .banner button {
   margin-left: 10px; background: rgba(0,0,0,.25); color: #fff; border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer;
 }
+
+/* ---- MODO TRIVIA CON BOMBA ---- */
+.trv-info { text-align: center; margin-top: 6px; max-width: 380px; }
+.trv-info .trv-p { font-size: 1.02rem; font-weight: 800; color: var(--accent2); line-height: 1.35; }
+.trv-info .trv-ops { margin-top: 6px; display: flex; flex-direction: column; gap: 4px; }
+.trv-info .trv-op-leida { font-size: .8rem; color: var(--muted); background: rgba(255,255,255,.04); border-radius: 8px; padding: 5px 8px; }
+.trv-opciones { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+.trv-op {
+  min-height: 52px; border-radius: 13px; font-size: 1.02rem; font-weight: 800; color: #fff;
+  background: var(--card); border: 2px solid #2c2750; cursor: pointer; padding: 9px 13px;
+  transition: transform .12s cubic-bezier(.22,1,.36,1); touch-action: manipulation; text-align: left; line-height: 1.25;
+}
+.trv-op:active { transform: scale(.96); }
+.trv-op:disabled { filter: grayscale(.5) brightness(.65); }
+
+/* ---- MODO EL ORÁCULO MIENTE ---- */
+.ora-zona { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
+.ora-preg { background: linear-gradient(135deg, rgba(176,107,255,.20), var(--card)); border: 2px solid var(--especial); border-radius: 15px; padding: 13px 14px; text-align: center; font-size: 1.12rem; font-weight: 800; color: #fff; line-height: 1.35; }
+.ora-sub { text-align: center; color: var(--muted); font-size: .82rem; line-height: 1.4; }
+.ora-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.ora-chip {
+  min-height: 44px; padding: 6px 12px; border-radius: 12px; font-size: .92rem; font-weight: 700; color: #fff;
+  background: var(--bg2); border: 2px solid #2c2750; cursor: pointer;
+  transition: transform .1s, border-color .15s; touch-action: manipulation;
+  display: flex; align-items: center; gap: 6px;
+}
+.ora-chip:active { transform: scale(.94); }
+.ora-chip.sel { border-color: var(--accent2); background: #2c2750; box-shadow: 0 0 10px rgba(255,179,0,.35); }
+.ora-chip.mio { border-style: dashed; opacity: .75; }
+.ora-frases { display: flex; flex-direction: column; gap: 8px; }
+.ora-frase {
+  background: var(--bg2); border: 2px solid #2c2750; border-radius: 13px; padding: 10px 12px;
+  font-size: .92rem; line-height: 1.35; text-align: left; color: var(--txt); cursor: pointer; width: 100%;
+  transition: transform .1s, border-color .15s;
+}
+.ora-frase:active { transform: scale(.98); }
+.ora-frase.asignada { border-color: var(--especial); }
+.ora-frase .ora-autor-tag { display: block; margin-top: 5px; font-size: .74rem; font-weight: 800; color: var(--accent2); }
+.ora-frase.revelada { cursor: default; }
+.ora-frase.revelada.era-oraculo { border-color: var(--danger); background: rgba(255,59,92,.10); }
+.ora-frase.revelada.era-real { border-color: var(--ok); }
+.ora-res-fila { display: flex; align-items: center; gap: 10px; background: var(--bg2); border-radius: 11px; padding: 8px 12px; font-size: .9rem; }
+.ora-res-fila .puntos { margin-left: auto; font-weight: 900; color: var(--accent2); white-space: nowrap; }
+.ora-espera { text-align: center; color: var(--muted); font-size: .88rem; padding: 12px; background: var(--bg2); border-radius: 13px; }
+.modo-op.deshabilitado { opacity: .45; }
+.modo-op.deshabilitado .md { color: var(--danger); }
+.btn:disabled { opacity: .45; filter: grayscale(.4); }
 </style>
 </head>
 <body>
@@ -409,6 +494,18 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
         <div class="mi">🔤</div><div class="mt">AHORCADO EXPRÉS</div>
         <div class="md">Adiviná la próxima letra entre 4 opciones antes de que se acabe el tiempo.</div>
       </div>
+      <div class="modo-op" id="modo-reflejos" onclick="UI.setModo('reflejos')">
+        <div class="mi">⚡</div><div class="mt">DUELO DE REFLEJOS</div>
+        <div class="md">Microjuegos relámpago: resolvé el desafío o la bomba te explota en la mano.</div>
+      </div>
+      <div class="modo-op" id="modo-trivia" onclick="UI.setModo('trivia')">
+        <div class="mi">❓</div><div class="mt">TRIVIA CON BOMBA</div>
+        <div class="md">Respondé la pregunta antes del contador o te explota en la mano.</div>
+      </div>
+      <div class="modo-op" id="modo-oraculo" onclick="UI.setModo('oraculo')">
+        <div class="mi">🔮</div><div class="mt">EL ORÁCULO MIENTE</div>
+        <div class="md">Votá, escribí una excusa anónima y adiviná quién escribió cada una. Mínimo 3.</div>
+      </div>
     </div>
     <p class="modo-lbl-invitado" id="modo-lbl" style="display:none"></p>
 
@@ -438,16 +535,19 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 
     <div class="bomba-zona">
       <div class="bomba-wrap" id="bomba-wrap">
-        <div class="bomba-grande" id="bomba-emoji">💣</div>
+        <div class="bomba-grande" id="bomba-emoji"><img class="bomba-img" src="img/bomba.gif" alt="💣"></div>
         <div class="mecha"><div class="chispa"></div></div>
       </div>
       <div class="quien-tiene" id="quien-tiene"></div>
-      <div class="turno-count" id="turno-count"></div>
       <div class="aho-cat" id="aho-cat"></div>
+      <div class="rf-info" id="rf-info"></div>
+      <div class="trv-info" id="trv-info"></div>
       <div class="aho-mask" id="aho-mask"></div>
       <div class="palabra-live" id="palabra-live"></div>
       <div class="usadas" id="usadas"></div>
     </div>
+
+    <div class="turno-count" id="turno-count" style="margin-top:2px"></div>
 
     <div id="turno-mio" class="turno-mio" style="display:none">
       <div class="aviso">🔥 ¡La tenés vos! Escribí una palabra</div>
@@ -455,9 +555,13 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
       <input id="in-palabra" type="text" maxlength="40" placeholder="tu palabra…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" inputmode="none">
       <div class="teclado-propio" id="teclado-propio"></div>
       <div class="aho-opciones" id="aho-opciones" style="display:none"></div>
+      <div class="trv-opciones" id="trv-opciones" style="display:none"></div>
+      <div class="rf-zona" id="rf-zona" style="display:none"></div>
       <button class="btn btn-primary" id="btn-pasar" onclick="UI.enviarPalabra()">PASAR LA BOMBA →</button>
       <p class="feedback-mal" id="feedback-mal"></p>
     </div>
+
+    <div class="ora-zona" id="ora-zona" style="display:none"></div>
 
     <div class="vidas-fila" id="vidas-fila"></div>
   </section>
@@ -509,7 +613,7 @@ const CFG = {
   MIN_JUG: 2,
   MAX_JUG: 12,
   VIDAS_INI: 3,
-  EMOJIS: ["🦊","🐸","🐙","🦄","🐲","🦖","🐧","🐨","🦁","🐵","🦉","🐢","🐶","🐱","🐭","🐹","🐰","🐻","🐼","🐯","🐮","🐷","🐔","🦆","🦅","🐺","🐴","🦓","🦒","🐘","🦔","🐬","🐳","🦋"],
+  EMOJIS: ["01_zorro.png","02_rana.png","03_pulpo.png","04_unicornio.png","05_dragon.png","06_trex.png","07_pinguino.png","08_koala.png","09_leon.png","10_mono.png","11_lechuza.png","12_tortuga.png","13_perro.png","14_gato.png","15_raton.png","16_hamster.png","17_conejo.png","18_oso.png","19_panda.png","20_tigre.png","21_vaca.png","22_cerdo.png","23_gallina.png","24_pato.png","25_aguila.png","26_lobo.png","27_caballo.png","28_cebra.png","29_jirafa.png","30_elefante.png","31_erizo.png","32_delfin.png","33_ballena.png","34_mariposa.png"],
   BOMBA_MIN_MS: 7000,
   BOMBA_MAX_MS: 20000,
   PROB_ESPECIAL: 0.18,
@@ -537,7 +641,25 @@ const CFG = {
   A_SEG_INI: 8,                              /* segundos para elegir letra al arranque */
   A_SEG_MIN: 6,                              /* piso: baja 1 segundo cada 3 rondas hasta acá */
   A_COMPLETA_SEG: 2,                         /* palabra completa a la vista antes de la nueva */
-  A_SIMIL_RONDA: 3                           /* desde esta ronda los distractores se parecen a la correcta */
+  A_SIMIL_RONDA: 3,                          /* desde esta ronda los distractores se parecen a la correcta */
+  /* modo duelo de reflejos */
+  RF_NIVEL_RONDAS: 2,                        /* el nivel de dificultad sube cada 2 rondas (0 a 3) */
+  RF_MEMO_HISTORIAL: 14,                     /* no repetir el mismo microjuego hasta pasar por varios distintos (27 en total) */
+  /* modo trivia con bomba */
+  TRV_CAMBIO_RONDAS: 2,                      /* la mezcla de tandas sube cada 2 rondas (0 a 4, análogo a RF_NIVEL_RONDAS) */
+  TRV_SEG: [13, 12, 11],                     /* segundos para responder según la tanda: fácil / media / difícil */
+  /* modo el oráculo miente */
+  ORA_RONDAS: 5,                             /* rondas por partida */
+  ORA_MIN_JUG: 3,                            /* con 2 jugadores el modo queda deshabilitado en el lobby */
+  ORA_SEG_VOTAR: 40,                         /* segundos para votar + escribir la justificación */
+  ORA_SEG_ADIVINAR_BASE: 40,                 /* base de segundos para adivinar autores */
+  ORA_SEG_ADIVINAR_FRASE: 6,                 /* + segundos por cada frase a clasificar */
+  ORA_SEG_RESULTADOS: 16,                    /* segundos de la pantalla de resultados de la ronda */
+  ORA_MAX_CHARS: 60,                         /* largo máximo de la justificación */
+  ORA_PTS_REAL: 2,                           /* puntos por adivinar el autor de una frase REAL */
+  ORA_PTS_ORACULO: 3,                        /* puntos por identificar una frase FALSA del Oráculo */
+  ORA_PTS_ENGANO: 1,                         /* puntos que gana el autor por cada jugador que falló SU frase */
+  ORA_PTS_ELEGIDO: 2                         /* bonus del más votado de la ronda */
 };
 
 const POOL_LETRAS = "ABCDEFGHILMNOPRSTU".split("");
@@ -752,6 +874,1047 @@ const AHO_CAT = (() => {
   return m;
 })();
 
+/* ========== 3e. MODO DUELO DE REFLEJOS: generador de microjuegos (el host genera y valida) ========== */
+const RF_COLORES = [
+  { n: "ROJO", c: "#e53935" }, { n: "AZUL", c: "#1e88e5" }, { n: "VERDE", c: "#43a047" },
+  { n: "AMARILLO", c: "#fdd835" }, { n: "VIOLETA", c: "#8e24aa" }, { n: "NARANJA", c: "#fb8c00" },
+  { n: "ROSA", c: "#ec407a" }, { n: "CELESTE", c: "#4dd0e1" }
+];
+const RF_IMPOSTORES = {
+  faciles: [["\u{1F355}","\u{1F354}"],["\u26BD","\u{1F3C0}"],["\u{1F697}","\u{1F68C}"],["\u{1F31E}","\u{1F327}\uFE0F"],["\u{1F436}","\u{1F431}"],["\u{1F335}","\u{1F334}"],["\u{1F3B8}","\u{1F941}"],["\u2708\uFE0F","\u{1F680}"]],
+  dificiles: [["\u{1F34E}","\u{1F345}"],["\u{1F600}","\u{1F603}"],["\u{1F42D}","\u{1F439}"],["\u{1F981}","\u{1F42F}"],["\u{1F31D}","\u{1F31A}"],["\u{1F422}","\u{1F40A}"],["\u{1F41D}","\u{1F41E}"],["\u{1F337}","\u{1F339}"]]
+};
+const RF_EMOJIS_CONTAR = ["\u{1F438}","\u2B50","\u{1F344}","\u{1F41F}","\u{1F388}","\u{1F340}","\u{1F511}","\u{1F9C0}"];
+/* nombres para "tocá el X" y "letra inicial" (nombre en mayúsculas, sin tilde para la inicial) */
+const RF_EMOJI_NOMBRES = [
+  { e: "\u{1F436}", n: "PERRO" }, { e: "\u{1F431}", n: "GATO" }, { e: "\u{1F42D}", n: "RATON" },
+  { e: "\u{1F430}", n: "CONEJO" }, { e: "\u{1F98A}", n: "ZORRO" }, { e: "\u{1F43B}", n: "OSO" },
+  { e: "\u{1F437}", n: "CHANCHO" }, { e: "\u{1F438}", n: "RANA" }, { e: "\u{1F435}", n: "MONO" },
+  { e: "\u{1F414}", n: "GALLINA" }, { e: "\u{1F427}", n: "PINGUINO" }, { e: "\u{1F989}", n: "BUHO" },
+  { e: "\u{1F98B}", n: "MARIPOSA" }, { e: "\u{1F40C}", n: "CARACOL" }, { e: "\u{1F41D}", n: "ABEJA" },
+  { e: "\u{1F422}", n: "TORTUGA" }, { e: "\u{1F41F}", n: "PEZ" }, { e: "\u{1F419}", n: "PULPO" },
+  { e: "\u{1F34E}", n: "MANZANA" }, { e: "\u{1F34C}", n: "BANANA" }, { e: "\u{1F349}", n: "SANDIA" },
+  { e: "\u{1F353}", n: "FRUTILLA" }, { e: "\u{1F955}", n: "ZANAHORIA" }, { e: "\u{1F355}", n: "PIZZA" },
+  { e: "\u{1F382}", n: "TORTA" }, { e: "\u26BD", n: "PELOTA" }, { e: "\u{1F3B8}", n: "GUITARRA" },
+  { e: "\u{1F697}", n: "AUTO" }, { e: "\u{1F6F8}", n: "OVNI" }, { e: "\u{1F311}", n: "LUNA" },
+  { e: "\u2B50", n: "ESTRELLA" }, { e: "\u{1F511}", n: "LLAVE" }, { e: "\u{1F384}", n: "ARBOL" },
+  { e: "\u{1F4DA}", n: "LIBROS" }, { e: "\u2702\uFE0F", n: "TIJERA" }, { e: "\u{1F9E6}", n: "MEDIAS" }
+];
+/* afirmaciones para verdadero/falso (v = ¿es verdadera?) */
+const RF_FALSO = [
+  { t: "El sol es fr\u00edo", v: false }, { t: "Los peces viven en el agua", v: true },
+  { t: "La semana tiene 9 d\u00edas", v: false }, { t: "El hielo es agua congelada", v: true },
+  { t: "Las vacas ponen huevos", v: false }, { t: "La luna se ve de noche", v: true },
+  { t: "Los gatos ladran", v: false }, { t: "El fuego quema", v: true },
+  { t: "2 + 2 es 5", v: false }, { t: "Un a\u00f1o tiene 12 meses", v: true },
+  { t: "Los pinguinos vuelan alt\u00edsimo", v: false }, { t: "Las ara\u00f1as tienen 8 patas", v: true },
+  { t: "El mar es de jugo de naranja", v: false }, { t: "Las plantas necesitan luz", v: true },
+  { t: "Los autos comen pasto", v: false }, { t: "La nieve es blanca", v: true },
+  { t: "El d\u00eda empieza a medianoche del mediod\u00eda", v: false }, { t: "Un tri\u00e1ngulo tiene 3 lados", v: true },
+  { t: "Los elefantes son m\u00e1s chicos que las hormigas", v: false }, { t: "El coraz\u00f3n bombea sangre", v: true },
+  { t: "Las bicicletas usan nafta", v: false }, { t: "La lluvia cae del cielo", v: true },
+  { t: "Los libros se comen con sal", v: false }, { t: "El domingo es un d\u00eda de la semana", v: true },
+  { t: "Las jirafas tienen cuello cort\u00edsimo", v: false }, { t: "Una hora tiene 60 minutos", v: true },
+  { t: "El pan se fabrica con piedras", v: false }, { t: "Los murci\u00e9lagos salen de noche", v: true },
+  { t: "El verano es la estaci\u00f3n m\u00e1s fr\u00eda", v: false }, { t: "Las abejas hacen miel", v: true }
+];
+const RF_LETRAS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const RF_VOCALES = "AEIOU";
+const RF = {
+  nivel(ronda) { return Math.min(3, Math.floor((ronda - 1) / CFG.RF_NIVEL_RONDAS)); },   /* 0-3: sube cada 2 rondas */
+  azar(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+  mezclar(a) { for (let i = a.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[k]; a[k] = t; } return a; },
+  TIPOS: ["color", "impostor", "mantener", "deslizar", "reves", "mate", "contar", "memoria", "rapido", "quieto",
+    "stroop", "mayor", "paridad", "orden", "vocal", "emojinombre", "serie", "inicial", "semaforo", "balanza",
+    "compara", "anagrama", "copiar", "falso", "frenar", "dobleimpostor", "gigante"],
+  /* elige un microjuego (sin repetir hasta pasar por varios distintos) con parámetros al azar y dificultad por ronda */
+  generar(ronda, usados) {
+    const niv = this.nivel(ronda);
+    let cands = this.TIPOS.filter(t => usados.indexOf(t) < 0);
+    if (!cands.length) { usados.length = 0; cands = this.TIPOS.slice(); }
+    const tipo = this.azar(cands);
+    usados.push(tipo);
+    while (usados.length > CFG.RF_MEMO_HISTORIAL) usados.shift();
+    return this["g_" + tipo](niv);
+  },
+  /* 1) tocá el color nombrado */
+  g_color(niv) {
+    const n = 4 + niv;
+    const cols = this.mezclar(RF_COLORES.slice()).slice(0, n);
+    const idx = Math.floor(Math.random() * n);
+    return { pub: { tipo: "color", titulo: "Toc\u00e1 el " + cols[idx].n, seg: 6 - Math.min(2, niv), colores: cols.map(c => c.c) }, sol: String(idx) };
+  },
+  /* 2) tocá al impostor (el distinto); desde nivel 1 los pares se parecen más */
+  g_impostor(niv) {
+    const par = this.azar(niv >= 1 ? RF_IMPOSTORES.dificiles : RF_IMPOSTORES.faciles);
+    const n = Math.min(12, 6 + niv * 2);
+    const idx = Math.floor(Math.random() * n);
+    const tiles = []; for (let i = 0; i < n; i++) tiles.push(i === idx ? par[1] : par[0]);
+    return { pub: { tipo: "impostor", titulo: "Toc\u00e1 al IMPOSTOR (el distinto)", seg: 7 - Math.min(2, niv), tiles }, sol: String(idx) };
+  },
+  /* 3) mantené apretado X,Xs exactos (la tolerancia se achica por nivel) */
+  g_mantener(niv) {
+    const obj = (4 + Math.floor(Math.random() * 5)) / 2;           /* 2,0 a 4,0 de a 0,5 */
+    const tol = 750 - niv * 140;                                   /* 750 -> 330 ms */
+    return { pub: { tipo: "mantener", titulo: "Manten\u00e9 apretado " + String(obj).replace(".", ",") + "s EXACTOS", seg: Math.ceil(obj) + 7, obj, tol }, sol: null };
+  },
+  /* 4) deslizá en la dirección de la flecha (desde nivel 2, a veces AL REVÉS) */
+  g_deslizar(niv) {
+    const dir = this.azar(["izq", "der", "arriba", "abajo"]);
+    const invertida = niv >= 2 && Math.random() < 0.5;
+    const OP = { izq: "der", der: "izq", arriba: "abajo", abajo: "arriba" };
+    return { pub: { tipo: "deslizar", titulo: invertida ? "\u00a1Desliz\u00e1 AL REV\u00c9S de la flecha!" : "Desliz\u00e1 hacia donde apunta la flecha", seg: 6 - Math.min(2, niv), dir, invertida }, sol: invertida ? OP[dir] : dir };
+  },
+  /* 5) palabra al revés (reusa el pool y la lógica de escritura existentes; el largo sube por nivel) */
+  g_reves(niv) {
+    const minL = 3 + niv, maxL = 4 + niv;
+    const cands = PAL_REVES.filter(p => p.length >= minL && p.length <= maxL);
+    const pal = this.azar(cands.length ? cands : PAL_REVES);
+    return { pub: { tipo: "reves", titulo: "Escrib\u00ed la palabra AL REV\u00c9S", seg: 5 + pal.length, palabra: pal }, sol: pal.split("").reverse().join("") };
+  },
+  /* 6) cuenta rápida con 4 opciones (suma -> resta -> multiplicación según nivel) */
+  g_mate(niv) {
+    let a, b, res, txt;
+    if (niv >= 2 && Math.random() < 0.5) { a = 2 + Math.floor(Math.random() * 8); b = 2 + Math.floor(Math.random() * 8); res = a * b; txt = a + " \u00d7 " + b; }
+    else if (niv >= 1 && Math.random() < 0.5) { a = 5 + Math.floor(Math.random() * (15 + niv * 15)); b = 1 + Math.floor(Math.random() * a); res = a - b; txt = a + " \u2212 " + b; }
+    else { a = 2 + Math.floor(Math.random() * (10 + niv * 15)); b = 2 + Math.floor(Math.random() * (10 + niv * 15)); res = a + b; txt = a + " + " + b; }
+    const ops = [res]; const vistos = { [res]: true };
+    while (ops.length < 4) { const d = res + (Math.floor(Math.random() * 9) - 4); if (!vistos[d] && d >= 0) { vistos[d] = true; ops.push(d); } }
+    this.mezclar(ops);
+    return { pub: { tipo: "mate", titulo: "\u00bfCu\u00e1nto es " + txt + "?", seg: 7 - Math.min(2, niv), ops }, sol: String(ops.indexOf(res)) };
+  },
+  /* 7) contá cuántos emojis del objetivo hay en el campo (más ruido por nivel) */
+  g_contar(niv) {
+    const obj = this.azar(RF_EMOJIS_CONTAR);
+    const resto = RF_EMOJIS_CONTAR.filter(e => e !== obj);
+    const k = 3 + Math.floor(Math.random() * 4);
+    const total = 10 + niv * 5;
+    const campo = [];
+    for (let i = 0; i < k; i++) campo.push(obj);
+    while (campo.length < total) campo.push(this.azar(resto));
+    this.mezclar(campo);
+    const ops = [k]; const vistos = { [k]: true };
+    while (ops.length < 4) { const d = k + (Math.floor(Math.random() * 5) - 2); if (!vistos[d] && d >= 1) { vistos[d] = true; ops.push(d); } }
+    this.mezclar(ops);
+    return { pub: { tipo: "contar", titulo: "\u00bfCu\u00e1ntos " + obj + " hay?", seg: 8, campo: campo.join(""), ops }, sol: String(ops.indexOf(k)) };
+  },
+  /* 8) secuencia de colores estilo simon (más larga por nivel) */
+  g_memoria(niv) {
+    const len = 3 + niv;
+    let seq = ""; for (let i = 0; i < len; i++) seq += Math.floor(Math.random() * 4);
+    return { pub: { tipo: "memoria", titulo: "Memoriz\u00e1 la secuencia y repetila", seg: 6 + len * 2, seq }, sol: seq };
+  },
+  /* 9) machacá el botón N veces */
+  g_rapido(niv) {
+    const n = 6 + niv * 3;
+    return { pub: { tipo: "rapido", titulo: "\u00a1Toc\u00e1 el bot\u00f3n " + n + " veces!", seg: 5 + niv, n }, sol: "ok" };
+  },
+  /* 10) anti-reflejo: NO toques nada durante X segundos */
+  g_quieto(niv) {
+    const espera = 3 + niv;
+    return { pub: { tipo: "quieto", titulo: "\u00a1NO toques NADA por " + espera + "s!", seg: espera + 3, espera }, sol: "ok" };
+  },
+  /* 11) stroop: tocá el color de la TINTA (la palabra dice otro color) */
+  g_stroop(niv) {
+    const n = 4 + Math.min(2, niv);
+    const cols = this.mezclar(RF_COLORES.slice()).slice(0, n);
+    const idxTinta = Math.floor(Math.random() * n);
+    let idxPal = Math.floor(Math.random() * n);
+    if (idxPal === idxTinta) idxPal = (idxPal + 1) % n;
+    return { pub: { tipo: "stroop", titulo: "Toc\u00e1 el color de la TINTA (no lo que dice)", seg: 7 - Math.min(2, niv), palabra: cols[idxPal].n, tinta: cols[idxTinta].c, colores: cols.map(c => c.c) }, sol: String(idxTinta) };
+  },
+  /* 12) tocá el número más grande (o más chico desde nivel 1) */
+  g_mayor(niv) {
+    const chico = niv >= 1 && Math.random() < 0.5;
+    const nums = []; const vistos = {};
+    while (nums.length < 4) { const v = 3 + Math.floor(Math.random() * (40 + niv * 60)); if (!vistos[v]) { vistos[v] = true; nums.push(v); } }
+    const obj = chico ? Math.min.apply(null, nums) : Math.max.apply(null, nums);
+    return { pub: { tipo: "mayor", titulo: "Toc\u00e1 el n\u00famero M\u00c1S " + (chico ? "CHICO" : "GRANDE"), seg: 6 - Math.min(2, niv), ops: nums }, sol: String(nums.indexOf(obj)) };
+  },
+  /* 13) tocá el número PAR (o IMPAR); hay uno solo que cumple */
+  g_paridad(niv) {
+    const par = Math.random() < 0.5;
+    const rnd = (esPar) => { let v; do { v = 2 + Math.floor(Math.random() * (30 + niv * 40)); } while ((v % 2 === 0) !== esPar); return v; };
+    const nums = []; const vistos = {};
+    const bueno = rnd(par); vistos[bueno] = true; nums.push(bueno);
+    while (nums.length < 4) { const v = rnd(!par); if (!vistos[v]) { vistos[v] = true; nums.push(v); } }
+    this.mezclar(nums);
+    return { pub: { tipo: "paridad", titulo: "Toc\u00e1 el \u00fanico n\u00famero " + (par ? "PAR" : "IMPAR"), seg: 7 - Math.min(2, niv), ops: nums }, sol: String(nums.indexOf(bueno)) };
+  },
+  /* 14) tocá los números de menor a mayor (3-5 según nivel) */
+  g_orden(niv) {
+    const n = 3 + Math.min(2, niv);
+    const nums = []; const vistos = {};
+    while (nums.length < n) { const v = 1 + Math.floor(Math.random() * (20 + niv * 30)); if (!vistos[v]) { vistos[v] = true; nums.push(v); } }
+    const sol = nums.slice().sort((a, b) => a - b).join(",");
+    this.mezclar(nums);
+    return { pub: { tipo: "orden", titulo: "Toc\u00e1 los n\u00fameros de MENOR a MAYOR", seg: 5 + n, nums }, sol };
+  },
+  /* 15) tocá la VOCAL entre consonantes (o al revés desde nivel 2) */
+  g_vocal(niv) {
+    const buscoVocal = !(niv >= 2 && Math.random() < 0.5);
+    const cons = RF_LETRAS.split("").filter(l => RF_VOCALES.indexOf(l) < 0);
+    const n = 4 + Math.min(2, niv);
+    const letras = []; const vistos = {};
+    const buena = buscoVocal ? this.azar(RF_VOCALES.split("")) : this.azar(cons);
+    vistos[buena] = true; letras.push(buena);
+    const pool = buscoVocal ? cons : RF_VOCALES.split("");
+    while (letras.length < n) { const l = this.azar(pool); if (!vistos[l]) { vistos[l] = true; letras.push(l); } }
+    this.mezclar(letras);
+    return { pub: { tipo: "vocal", titulo: "Toc\u00e1 la \u00fanica " + (buscoVocal ? "VOCAL" : "CONSONANTE"), seg: 6 - Math.min(2, niv), ops: letras }, sol: String(letras.indexOf(buena)) };
+  },
+  /* 16) tocá el emoji nombrado ("tocá el PERRO") */
+  g_emojinombre(niv) {
+    const n = Math.min(9, 4 + niv * 2);
+    const els = this.mezclar(RF_EMOJI_NOMBRES.slice()).slice(0, n);
+    const idx = Math.floor(Math.random() * n);
+    return { pub: { tipo: "emojinombre", titulo: "Toc\u00e1: " + els[idx].n, seg: 6 - Math.min(2, niv), tiles: els.map(x => x.e) }, sol: String(idx) };
+  },
+  /* 17) ¿qué número sigue en la serie? (+k; ×2 o -k desde nivel 1) */
+  g_serie(niv) {
+    let arr, res;
+    const modo = niv >= 1 ? Math.floor(Math.random() * 3) : 0;
+    if (modo === 1) { const a = 1 + Math.floor(Math.random() * 4); arr = [a, a * 2, a * 4]; res = a * 8; }
+    else if (modo === 2) { const k = 2 + Math.floor(Math.random() * 4); const a = 20 + k * 3 + Math.floor(Math.random() * 20); arr = [a, a - k, a - 2 * k]; res = a - 3 * k; }
+    else { const k = 2 + Math.floor(Math.random() * (3 + niv * 2)); const a = 1 + Math.floor(Math.random() * 10); arr = [a, a + k, a + 2 * k]; res = a + 3 * k; }
+    const ops = [res]; const vistos = { [res]: true };
+    while (ops.length < 4) { const d = res + (Math.floor(Math.random() * 9) - 4); if (!vistos[d] && d >= 0) { vistos[d] = true; ops.push(d); } }
+    this.mezclar(ops);
+    return { pub: { tipo: "serie", titulo: "\u00bfQu\u00e9 n\u00famero sigue? " + arr.join(", ") + ", \u2026", seg: 8 - Math.min(2, niv), ops }, sol: String(ops.indexOf(res)) };
+  },
+  /* 18) tocá la letra con la que empieza el emoji mostrado */
+  g_inicial(niv) {
+    const el = this.azar(RF_EMOJI_NOMBRES);
+    const buena = el.n[0];
+    const letras = [buena]; const vistos = { [buena]: true };
+    while (letras.length < 4) { const l = this.azar(RF_LETRAS.split("")); if (!vistos[l]) { vistos[l] = true; letras.push(l); } }
+    this.mezclar(letras);
+    return { pub: { tipo: "inicial", titulo: "\u00bfCon qu\u00e9 letra empieza?", seg: 7 - Math.min(2, niv), grande: el.e, ops: letras }, sol: String(letras.indexOf(buena)) };
+  },
+  /* 19) semáforo: esperá el VERDE y tocá (tocar en rojo = explota) */
+  g_semaforo(niv) {
+    const rojoMs = 1500 + Math.floor(Math.random() * (2500 + niv * 1000));
+    return { pub: { tipo: "semaforo", titulo: "Esper\u00e1 el VERDE\u2026 \u00a1y toc\u00e1!", seg: Math.ceil(rojoMs / 1000) + 3, rojoMs }, sol: "ok" };
+  },
+  /* 20) balanza: tocá el lado que tiene MÁS emojis */
+  g_balanza(niv) {
+    const e = this.azar(RF_EMOJIS_CONTAR);
+    const a = 3 + Math.floor(Math.random() * (5 + niv * 2));
+    const dif = Math.max(1, 3 - niv);
+    const b = a + dif;
+    const gana = Math.random() < 0.5 ? "a" : "b";
+    return { pub: { tipo: "balanza", titulo: "Toc\u00e1 el lado con M\u00c1S " + e, seg: 7 - Math.min(2, niv), campoA: e.repeat(gana === "a" ? b : a), campoB: e.repeat(gana === "a" ? a : b) }, sol: gana === "a" ? "a" : "b" };
+  },
+  /* 21) comparación rápida: ¿es cierto que X op Y > Z? SÍ/NO */
+  g_compara(niv) {
+    const a = 2 + Math.floor(Math.random() * (10 + niv * 10));
+    const b = 2 + Math.floor(Math.random() * (10 + niv * 10));
+    const suma = a + b;
+    const z = suma + (Math.floor(Math.random() * 7) - 3);
+    const mayor = Math.random() < 0.5;
+    const cierto = mayor ? suma > z : suma < z;
+    const ops = ["S\u00cd", "NO"];
+    return { pub: { tipo: "compara", titulo: "\u00bfEs cierto? " + a + " + " + b + " " + (mayor ? ">" : "<") + " " + z, seg: 7 - Math.min(2, niv), ops }, sol: String(cierto ? 0 : 1) };
+  },
+  /* 22) anagrama: ordená las letras y escribí la palabra (teclado propio) */
+  g_anagrama(niv) {
+    const minL = 4, maxL = 5 + niv;
+    const cands = PAL_REVES.filter(p => p.length >= minL && p.length <= maxL);
+    const pal = this.azar(cands.length ? cands : PAL_REVES);
+    let mez = pal;
+    for (let i = 0; i < 12 && mez === pal; i++) mez = this.mezclar(pal.split("")).join("");
+    return { pub: { tipo: "anagrama", titulo: "Orden\u00e1 las letras y escrib\u00ed la palabra", seg: 6 + pal.length, palabra: mez.toUpperCase() }, sol: pal };
+  },
+  /* 23) copiá la palabra EXACTA, rápido (teclado propio) */
+  g_copiar(niv) {
+    const minL = 5 + niv, maxL = 7 + niv;
+    const cands = PAL_REVES.filter(p => p.length >= minL && p.length <= maxL);
+    const pal = this.azar(cands.length ? cands : PAL_REVES);
+    return { pub: { tipo: "copiar", titulo: "\u00a1Escrib\u00ed la palabra EXACTA!", seg: 4 + Math.ceil(pal.length / 2), palabra: pal.toUpperCase() }, sol: pal };
+  },
+  /* 24) ¿verdadero o falso? */
+  g_falso(niv) {
+    const f = this.azar(RF_FALSO);
+    return { pub: { tipo: "falso", titulo: "\u00bfVerdadero o falso? \u00ab" + f.t + "\u00bb", seg: 7 - Math.min(2, niv), ops: ["VERDADERO", "FALSO"] }, sol: String(f.v ? 0 : 1) };
+  },
+  /* 25) frená la barra dentro de la zona verde (más angosta y rápida por nivel) */
+  g_frenar(niv) {
+    const ancho = 26 - niv * 5;                                    /* 26 -> 11 % */
+    const zi = 8 + Math.floor(Math.random() * (84 - ancho));
+    const vel = 1500 - niv * 250;                                  /* ms por barrido */
+    return { pub: { tipo: "frenar", titulo: "\u00a1Fren\u00e1 la barra en la zona VERDE!", seg: 8, zi, zf: zi + ancho, vel }, sol: null };
+  },
+  /* 26) doble impostor: hay DOS distintos, tocá a los dos */
+  g_dobleimpostor(niv) {
+    const par = this.azar(niv >= 1 ? RF_IMPOSTORES.dificiles : RF_IMPOSTORES.faciles);
+    const n = Math.min(12, 8 + niv);
+    let i1 = Math.floor(Math.random() * n), i2 = Math.floor(Math.random() * n);
+    while (i2 === i1) i2 = Math.floor(Math.random() * n);
+    const tiles = []; for (let i = 0; i < n; i++) tiles.push(i === i1 || i === i2 ? par[1] : par[0]);
+    return { pub: { tipo: "dobleimpostor", titulo: "Hay DOS impostores: toc\u00e1 a los dos", seg: 9 - Math.min(2, niv), tiles }, sol: [i1, i2].sort((a, b) => a - b).join("-") };
+  },
+  /* 27) tocá el emoji un toque MÁS GRANDE que el resto */
+  g_gigante(niv) {
+    const e = this.azar(RF_EMOJIS_CONTAR);
+    const n = Math.min(12, 6 + niv * 2);
+    const idx = Math.floor(Math.random() * n);
+    const dif = Math.max(18, 42 - niv * 8);                        /* % extra de tamaño: 42 -> 18 */
+    return { pub: { tipo: "gigante", titulo: "Toc\u00e1 el " + e + " M\u00c1S GRANDE", seg: 7 - Math.min(2, niv), tiles: Array(n).fill(e), grande: idx, dif }, sol: String(idx) };
+  }
+};
+
+
+/* ========== 3f. MODO TRIVIA CON BOMBA: pool propio en 3 tandas + rotación persistente ==========
+   Cada entrada: [pregunta, correcta, distractor1, distractor2, (distractor3)].
+   El host baraja las opciones al generar y guarda el índice correcto SOLO en el host (trvSol),
+   igual que hace RF con rfSol. Las 400 entradas se auditan por constante. */
+const TRV_FACIL = [
+["¿Cuántas patas tiene una araña?","8","6","4","10"],
+["¿Qué animal es conocido como el rey de la selva?","El león","El tigre","El elefante","El gorila"],
+["¿Cuál es el planeta más cercano al Sol?","Mercurio","Venus","Marte","La Tierra"],
+["¿En qué continente está Argentina?","América del Sur","Europa","África","Asia"],
+["¿Qué color sale de mezclar azul y amarillo?","Verde","Naranja","Violeta","Marrón"],
+["¿Cuántos días tiene una semana?","7","5","6","8"],
+["¿Qué bebida caliente es la más típica de Argentina?","El mate","El té","El café","La chocolatada"],
+["¿Qué instrumento tiene 88 teclas?","El piano","La guitarra","El violín","La batería"],
+["¿Cuál es el océano más grande del mundo?","El Pacífico","El Atlántico","El Índico","El Ártico"],
+["¿Qué fruta es amarilla por fuera y se pela?","La banana","La manzana","La uva","La frutilla"],
+["¿Cuántas estaciones tiene el año?","4","2","3","5"],
+["¿Qué animal pone huevos y dice cuac cuac?","El pato","La vaca","El gato","El perro"],
+["¿En qué provincia argentina están las Cataratas del Iguazú?","Misiones","Salta","Córdoba","Mendoza"],
+["¿Cuánto es 5 + 7?","12","10","11","13"],
+["¿Qué planeta es conocido como el planeta rojo?","Marte","Júpiter","Saturno","Venus"],
+["¿Cuál es la capital de Argentina?","Buenos Aires","Córdoba","Rosario","Mendoza"],
+["¿Qué usamos para ver las estrellas de cerca?","Un telescopio","Un microscopio","Un termómetro","Una lupa"],
+["¿Qué verdura es naranja y le encanta a los conejos?","La zanahoria","La lechuga","La papa","El tomate"],
+["¿Cuántos jugadores de fútbol tiene un equipo en la cancha?","11","9","10","12"],
+["¿Qué gas respiramos para vivir?","Oxígeno","Humo","Vapor","Helio"],
+["¿Qué animal marino tiene ocho brazos?","El pulpo","El tiburón","La ballena","El cangrejo"],
+["¿De qué color es el sol?","Amarillo","Verde","Azul","Violeta"],
+["¿Qué día viene después del viernes?","El sábado","El lunes","El jueves","El domingo"],
+["¿Qué comida argentina es una masa rellena al horno o frita?","La empanada","La pizza","El pancho","El helado"],
+["¿Cuál es el animal más grande del mundo?","La ballena azul","El elefante","La jirafa","El hipopótamo"],
+["¿Cuántas letras tiene la palabra sol?","3","2","4","5"],
+["¿Qué aparato usamos para hablar a distancia?","El teléfono","La heladera","El televisor","La plancha"],
+["¿Qué cae del cielo cuando llueve?","Agua","Nieve siempre","Arena","Hojas"],
+["¿Qué animal tiene el cuello más largo?","La jirafa","El caballo","El avestruz","El cisne"],
+["¿En qué mes se festeja la Navidad?","Diciembre","Enero","Julio","Octubre"],
+["¿Qué deporte se juega con una raqueta y una pelotita amarilla?","El tenis","El fútbol","El básquet","El vóley"],
+["¿Qué fruto seco viene dentro de una cáscara dura y lo comen las ardillas?","La nuez","La manzana","La banana","La naranja"],
+["¿Cuál es el río más ancho del mundo, que baña a Buenos Aires?","El Río de la Plata","El Amazonas","El Nilo","El Paraná"],
+["¿Qué insecto hace miel?","La abeja","La mosca","El mosquito","La hormiga"],
+["¿Cuántos minutos tiene una hora?","60","30","90","100"],
+["¿Qué parte del cuerpo usamos para oler?","La nariz","La boca","La oreja","El codo"],
+["¿Qué vehículo anda sobre rieles?","El tren","El auto","El barco","La bicicleta"],
+["¿Cuál es la capital de Uruguay?","Montevideo","Punta del Este","Colonia","Salto"],
+["¿Qué color tienen las hojas de los árboles?","Verde","Azul","Rojo siempre","Negro"],
+["¿Qué animal dice miau?","El gato","El perro","La vaca","El chancho"],
+["¿Cuánto es 10 menos 4?","6","5","7","4"],
+["¿Qué usamos para cortar papel?","La tijera","La cuchara","El tenedor","El vaso"],
+["¿Qué planeta tiene anillos famosos?","Saturno","Marte","Mercurio","Venus"],
+["¿Qué comida italiana tiene masa, salsa y queso?","La pizza","El guiso","La sopa","La ensalada"],
+["¿En qué hemisferio está Argentina?","En el sur","En el norte","En el ecuador","En el este"],
+["¿Qué animal es el mejor amigo del hombre?","El perro","El gato","El caballo","El loro"],
+["¿Cuántas vocales hay?","5","4","6","7"],
+["¿Qué bebida blanca dan las vacas?","La leche","El agua","El jugo","La gaseosa"],
+["¿Qué mes viene después de junio?","Julio","Mayo","Agosto","Abril"],
+["¿Qué instrumento se toca soplando?","La flauta","El piano","El tambor","La guitarra"],
+["¿Qué ave no vuela y vive en el hielo?","El pingüino","El águila","La paloma","El loro"],
+["¿Cuál es el deporte más popular de Argentina?","El fútbol","El golf","El béisbol","El cricket"],
+["¿Qué usamos cuando llueve para no mojarnos?","El paraguas","El ventilador","La estufa","El espejo"],
+["¿Qué número viene después del 19?","20","18","21","29"],
+["¿Qué animal cambia de color para esconderse?","El camaleón","El perro","La vaca","La gallina"],
+["¿Qué comida se hace con papas fritas y huevo?","La tortilla","El flan","El puré","La sopa"],
+["¿Cuántas ruedas tiene una bicicleta?","2","3","4","1"],
+["¿Qué órgano bombea la sangre?","El corazón","El pulmón","El hígado","El estómago"],
+["¿En qué país está la Torre Eiffel?","Francia","Italia","España","Inglaterra"],
+["¿Qué fruta es roja y chiquita y va en las tortas?","La frutilla","El melón","La sandía","La banana"],
+["¿Qué animal tiene trompa?","El elefante","El león","El tigre","La jirafa"],
+["¿Cuánto es 3 × 3?","9","6","12","8"],
+["¿Qué color es la nieve?","Blanca","Gris","Amarilla","Celeste"],
+["¿Qué ciudad argentina es famosa por el tango?","Buenos Aires","Bariloche","Ushuaia","Tandil"],
+["¿Qué animal vive en el agua y tiene aletas?","El pez","El perro","El gato","El caballo"],
+["¿Qué usamos para saber la hora?","El reloj","La regla","La balanza","El termómetro"],
+["¿Cuál es la moneda de Argentina?","El peso","El dólar","El euro","El real"],
+["¿Qué le sale a la oruga cuando crece?","Una mariposa","Una mosca","Una abeja","Un escarabajo"],
+["¿Cuántos meses tiene el año?","12","10","11","13"],
+["¿Qué planeta es en el que vivimos?","La Tierra","Marte","Venus","Júpiter"],
+["¿Qué comida típica se hace a la parrilla en Argentina?","El asado","La paella","El sushi","La sopa"],
+["¿Qué parte de la planta está bajo tierra?","La raíz","La hoja","La flor","El tallo"],
+["¿Qué animal australiano salta y lleva a sus crías en la bolsa?","El canguro","El koala","El oso panda","El mono"],
+["¿Cuánto es la mitad de 20?","10","5","15","8"],
+["¿Qué color sale de mezclar rojo y blanco?","Rosa","Naranja","Celeste","Gris"],
+["¿Qué usamos para cepillarnos los dientes?","El cepillo de dientes","El peine","La esponja","La toalla"],
+["¿Qué ave pone los huevos más grandes?","El avestruz","La gallina","El pato","La paloma"],
+["¿En qué estación del año caen las hojas de los árboles?","En otoño","En verano","En primavera","En invierno"],
+["¿Qué dulce se hace con cacao?","El chocolate","El caramelo","El turrón","La gomita"],
+["¿Qué vehículo vuela?","El avión","El auto","El tren","La moto"],
+["¿Cuántas sílabas tiene la palabra mate?","2","1","3","4"],
+["¿Qué animal tiene manchas negras y es el más rápido de la tierra?","El guepardo","El león","El caballo","El galgo"],
+["¿Qué usamos para escribir en el pizarrón?","La tiza","El tenedor","La copa","El cepillo"],
+["¿Cuál es la capital de Chile?","Santiago","Valparaíso","Concepción","La Serena"],
+["¿Qué fruta tiene la cáscara con gajos por dentro?","La naranja","La banana","La manzana","La pera"],
+["¿Qué animal es rosa y hace oinc?","El chancho","La oveja","La cabra","El caballo"],
+["¿Cuántos dedos tenemos en una mano?","5","4","6","10"],
+["¿Qué sale de las vacas y de las cabras?","La leche","El jugo","El agua","El vino"],
+["¿Qué aparato enfría la comida?","La heladera","El horno","La estufa","El microondas"],
+["¿En qué continente está Brasil?","En América","En Europa","En Asia","En Oceanía"],
+["¿Qué animal tiene una melena y ruge?","El león","El tigre","El gato","El perro"],
+["¿Cuánto es 2 + 2?","4","3","5","6"],
+["¿Qué día de la semana es hoy si ayer fue martes?","Miércoles","Lunes","Jueves","Domingo"],
+["¿Qué flor es amarilla y sigue al sol?","El girasol","La rosa","El clavel","La margarita"],
+["¿Qué usamos para llamar a alguien a la puerta?","El timbre","La llave","El picaporte","La ventana"],
+["¿Qué bebida es de color marrón y tiene cafeína?","El café","La leche","El agua","El jugo de uva"],
+["¿Qué animal es blanco, da lana y dice bee?","La oveja","La vaca","El chancho","La cabra"],
+["¿Cuántas puntas tiene una estrella típica?","5","4","6","3"],
+["¿Qué deporte se juega en el potrero con dos arcos?","El fútbol","El tenis","El golf","El remo"],
+["¿Qué comida viene en cono o en vasito y es fría?","El helado","La sopa","El puré","La ensalada"],
+["¿Qué órgano usamos para pensar?","El cerebro","El corazón","El pulmón","El hígado"],
+["¿En qué país está la Estatua de la Libertad?","Estados Unidos","Francia","Italia","México"],
+["¿Qué animal tiene orejas largas y le gustan las zanahorias?","El conejo","El ratón","El gato","El perro"],
+["¿Cuánto es 7 + 8?","15","14","16","13"],
+["¿Qué color tiene el cielo en un día despejado?","Celeste","Verde","Rojo","Marrón"],
+["¿Qué usamos para cortar la carne en la mesa?","El cuchillo","La cuchara","El tenedor solo","El vaso"],
+["¿Qué ave canta temprano a la mañana en el campo?","El gallo","La lechuza","El búho","El murciélago"],
+["¿Cuál es la capital de Brasil?","Brasilia","San Pablo","Río de Janeiro","Salvador"],
+["¿Qué fruta tropical es amarilla por dentro y tiene corona?","El ananá","La banana","El mango","La papaya"],
+["¿Qué animal vive en el desierto y tiene joroba?","El camello","El caballo","La llama","La vaca"],
+["¿Cuántas horas tiene un día?","24","12","48","20"],
+["¿Qué usamos para ver cosas muy chiquitas?","El microscopio","El telescopio","El espejo","La linterna"],
+["¿Qué verdura hace llorar cuando la cortás?","La cebolla","La papa","La zanahoria","El zapallo"],
+["¿En qué mes empieza el año?","Enero","Febrero","Diciembre","Marzo"],
+["¿Qué animal marino es el más grande y tiene bigotes en la boca?","La ballena","El tiburón","El delfín","El pulpo"],
+["¿Cuánto es 9 menos 3?","6","5","7","4"],
+["¿Qué usamos para sentarnos?","La silla","La mesa","La cama","El placard"],
+["¿Qué color es el pasto?","Verde","Azul","Amarillo","Rojo"],
+["¿Qué animal es el símbolo del oso que come bambú?","El panda","El koala","El oso polar","El zorro"],
+["¿Qué deporte usa un aro y una pelota naranja?","El básquet","El fútbol","El handball","El vóley"],
+["¿Qué instrumento tiene cuerdas y se rasga?","La guitarra","El piano","La trompeta","El tambor"],
+["¿Qué animal tiene rayas negras y blancas?","La cebra","El caballo","La vaca","El tigre"],
+["¿Cuánto es 6 × 2?","12","10","14","8"],
+["¿Qué usamos para secarnos después de bañarnos?","La toalla","La sábana","La cortina","El repasador"],
+["¿Qué planeta es el más grande del sistema solar?","Júpiter","La Tierra","Marte","Venus"],
+["¿Qué comida argentina es una tarta dulce con dulce de leche?","La chocotorta","El locro","El guiso","La polenta"],
+["¿Qué animal es nocturno y gira la cabeza casi toda?","El búho","El gallo","La paloma","El loro"],
+["¿Cuántos ojos tiene una persona?","2","1","3","4"],
+["¿Qué usamos para tomar sopa?","La cuchara","El tenedor","El cuchillo","Los palitos"],
+["¿En qué país está Machu Picchu?","Perú","México","Chile","Bolivia"],
+["¿Qué color tiene el tomate maduro?","Rojo","Verde","Amarillo","Violeta"],
+["¿Qué animal es conocido por decir guau?","El perro","El gato","El pato","La oveja"],
+["¿Cuánto es 15 menos 5?","10","5","9","11"],
+["¿Qué usamos para ver mejor cuando hay poca luz?","La linterna","La vela apagada","El espejo","El abanico"],
+["¿Qué estación es la más calurosa del año?","El verano","El invierno","El otoño","La primavera"],
+["¿Qué comida se hace con harina, agua y levadura?","El pan","El queso","El jamón","La ensalada"],
+["¿Qué animal tiene escamas y nada?","El pez","El perro","El gato","El caballo"],
+["¿Cuántas semanas tiene un mes, más o menos?","4","2","6","8"],
+["¿Qué usamos para abrir la puerta?","La llave","El control remoto","La tarjeta de cumpleaños","El destornillador"],
+["¿Cuál es la capital de Perú?","Lima","Cusco","Arequipa","Quito"],
+["¿Qué fruta es verde por fuera y roja por dentro?","La sandía","El melón","La manzana","La pera"],
+["¿Qué animal es el más alto de la selva?","La jirafa","El elefante","El mono","El tigre"],
+["¿Cuánto es 4 + 4?","8","6","9","7"],
+["¿Qué aparato usamos para ver películas en casa?","El televisor","La radio","La heladera","El ventilador"],
+["¿Qué bebida se hace exprimiendo naranjas?","El jugo de naranja","La leche","El mate","El café"],
+["¿Qué animal lleva su casa a cuestas?","El caracol","El perro","El gato","La rana"],
+["¿Cuántos meses tienen 31 días?","7","5","6","4"],
+["¿Qué usamos para peinarnos?","El peine","El cepillo de dientes","La esponja","La toalla"],
+["¿En qué océano está la costa de Argentina?","El Atlántico","El Pacífico","El Índico","El Ártico"],
+["¿Qué color sale de mezclar rojo y amarillo?","Naranja","Verde","Violeta","Marrón"],
+["¿Qué animal vive en el Polo Norte?","El oso polar","El pingüino emperador","El tigre","El león"],
+["¿Cuánto es 20 dividido 2?","10","5","15","8"],
+["¿Qué usamos para guardar la ropa?","El placard","La heladera","El horno","La bañera"],
+["¿Qué verdura se usa para hacer puré?","La papa","La lechuga","El tomate","El pepino"],
+["¿Qué animal es un felino doméstico?","El gato","El perro","El conejo","El hámster"],
+["¿Cuánto es 5 × 5?","25","20","30","15"],
+["¿Qué deporte practicaba Manu Ginóbili?","El básquet","El fútbol","El tenis","El rugby"],
+["¿Qué usamos para enfriar la habitación en verano?","El ventilador","La estufa","El calefactor","El horno"],
+["¿En qué continente está Egipto?","África","Asia","Europa","Oceanía"],
+["¿Qué animal dice mu?","La vaca","El chancho","La oveja","El caballo"],
+["¿Cuántos lados tiene un cuadrado?","4","3","5","6"],
+["¿Qué usamos para tomar mate?","La bombilla","La pajita","El sorbete de plástico","La cuchara"],
+["¿Qué fruta es la favorita de los monos?","La banana","La manzana","La pera","La uva"],
+["¿Qué animal vive tanto en la tierra como en el agua y croa?","La rana","El pez","El perro","La tortuga solo en tierra"],
+["¿Cuánto es 100 menos 50?","50","25","75","40"],
+["¿Qué usamos para limpiar el piso?","La escoba","La sartén","La plancha","El secador"],
+["¿Qué astro nos da luz durante el día?","El sol","La luna","Las estrellas","Los cometas"],
+["¿Qué comida típica argentina lleva carne, choclo y zapallo?","El locro","La pizza","Los fideos","La milanesa"],
+["¿Qué animal tiene bigotes y caza ratones?","El gato","El perro","El conejo","La gallina"],
+["¿Cuánto es 8 + 6?","14","12","15","13"],
+["¿Qué usamos para saber la temperatura?","El termómetro","El reloj","La balanza","La regla"],
+["¿En qué estación florecen las plantas?","En primavera","En invierno","En otoño","En verano"],
+["¿Qué color tiene el limón?","Amarillo","Verde siempre","Naranja","Rojo"],
+["¿Qué animal es el papá del pollito?","El gallo","El pato","El pavo","El loro"],
+["¿Cuántos jugadores juegan por equipo en el vóley?","6","5","7","11"],
+["¿Qué usamos para cortar el pasto?","La máquina de cortar pasto","La escoba","La pala de cocina","La plancha"],
+["¿Qué dulce argentino es una masa con dulce de leche y coco o chocolate?","El alfajor","El pan dulce sin frutas","La galleta de agua","El pan lactal"],
+["¿Qué animal es gris, grande y vive en el río?","El hipopótamo","El gato","El perro","El conejo"],
+["¿Cuánto es 7 × 2?","14","12","16","9"],
+["¿Qué órgano usamos para escuchar?","El oído","La nariz","La boca","El ojo"],
+];
+const TRV_MEDIA = [
+["¿En qué año llegó Colón a América?","1492","1500","1453","1520"],
+["¿Cuál es el río más largo del mundo?","El Amazonas","El Nilo","El Paraná","El Misisipi"],
+["¿Qué gas usan las plantas para hacer fotosíntesis?","Dióxido de carbono","Oxígeno","Nitrógeno","Hidrógeno"],
+["¿Quién escribió el Martín Fierro?","José Hernández","Jorge Luis Borges","Julio Cortázar","Sarmiento"],
+["¿Cuál es la capital de Australia?","Canberra","Sídney","Melbourne","Perth"],
+["¿En qué año Argentina ganó su primer Mundial de fútbol?","1978","1986","1930","2022"],
+["¿Qué planeta está más lejos del Sol?","Neptuno","Urano","Saturno","Júpiter"],
+["¿Cuántos huesos tiene el cuerpo humano adulto?","206","150","300","180"],
+["¿Quién pintó la Mona Lisa?","Leonardo da Vinci","Miguel Ángel","Rafael","Picasso"],
+["¿Qué metal es líquido a temperatura ambiente?","El mercurio","El hierro","El aluminio","El cobre"],
+["¿Cuál es la montaña más alta del mundo?","El Everest","El Aconcagua","El K2","El Mont Blanc"],
+["¿En qué provincia argentina está el Cerro Aconcagua?","Mendoza","San Juan","Salta","Neuquén"],
+["¿Quién fue el primer presidente de Argentina?","Bernardino Rivadavia","Manuel Belgrano","José de San Martín","Julio A. Roca"],
+["¿Qué órgano del cuerpo produce la insulina?","El páncreas","El hígado","El riñón","El bazo"],
+["¿Cuál es la capital de Japón?","Tokio","Osaka","Kioto","Hiroshima"],
+["¿En qué año se declaró la independencia de Argentina?","1816","1810","1820","1806"],
+["¿Qué elemento químico tiene el símbolo O?","El oxígeno","El oro","El osmio","El óxido"],
+["¿Quién compuso la Novena Sinfonía?","Beethoven","Mozart","Bach","Chopin"],
+["¿Cuál es el desierto más grande del mundo?","El Sahara","El Gobi","El Atacama","El Kalahari"],
+["¿Qué país ganó el Mundial de fútbol de 2022?","Argentina","Francia","Brasil","Alemania"],
+["¿Qué científico propuso la teoría de la relatividad?","Albert Einstein","Isaac Newton","Galileo Galilei","Nikola Tesla"],
+["¿Cuál es la capital de Canadá?","Ottawa","Toronto","Vancouver","Montreal"],
+["¿Qué cordillera separa Argentina de Chile?","Los Andes","Las Rocosas","Los Alpes","El Himalaya"],
+["¿Quién escribió Cien años de soledad?","Gabriel García Márquez","Mario Vargas Llosa","Pablo Neruda","Julio Cortázar"],
+["¿Cuánto es 15 × 4?","60","45","75","50"],
+["¿Qué vitamina produce el cuerpo con el sol?","La vitamina D","La vitamina C","La vitamina A","La vitamina B12"],
+["¿Cuál es el animal terrestre más rápido?","El guepardo","El león","El caballo","El avestruz"],
+["¿En qué año se fundó Buenos Aires por primera vez?","1536","1810","1492","1600"],
+["¿Qué filósofo griego fue maestro de Alejandro Magno?","Aristóteles","Platón","Sócrates","Heráclito"],
+["¿Cuál es la capital de Egipto?","El Cairo","Alejandría","Luxor","Giza"],
+["¿Qué órgano filtra la sangre y produce orina?","El riñón","El hígado","El bazo","El páncreas"],
+["¿Quién fue el libertador de Argentina, Chile y Perú?","José de San Martín","Simón Bolívar","Manuel Belgrano","Bernardo O Higgins"],
+["¿Cuál es el metal más caro y usado en joyas?","El oro","La plata","El bronce","El acero"],
+["¿En qué año llegó el hombre a la Luna?","1969","1959","1979","1965"],
+["¿Qué escritor argentino escribió Ficciones y El Aleph?","Jorge Luis Borges","Julio Cortázar","Ernesto Sabato","Adolfo Bioy Casares"],
+["¿Cuál es la capital de Italia?","Roma","Milán","Nápoles","Venecia"],
+["¿Qué vasos llevan la sangre con oxígeno del corazón al cuerpo?","Las arterias","Las venas","Los capilares","Los nervios"],
+["¿Qué instrumento mide los terremotos?","El sismógrafo","El barómetro","El termómetro","El anemómetro"],
+["¿Quién fue el primer hombre en pisar la Luna?","Neil Armstrong","Buzz Aldrin","Yuri Gagarin","Michael Collins"],
+["¿Cuánto es 144 dividido 12?","12","14","10","16"],
+["¿Qué país tiene forma de bota en el mapa?","Italia","España","Grecia","Portugal"],
+["¿Quién creó el personaje de Sherlock Holmes?","Arthur Conan Doyle","Agatha Christie","Edgar Allan Poe","Charles Dickens"],
+["¿Cuál es la moneda de Japón?","El yen","El won","El yuan","El bath"],
+["¿Qué continente tiene más países?","África","Asia","Europa","América"],
+["¿Quién pintó el techo de la Capilla Sixtina?","Miguel Ángel","Leonardo da Vinci","Rafael","Donatello"],
+["¿Qué gas forma la mayor parte del aire?","El nitrógeno","El oxígeno","El dióxido de carbono","El helio"],
+["¿En qué año se hizo la primera Copa del Mundo de fútbol?","1930","1920","1950","1900"],
+["¿Qué club argentino tiene como apodo los millonarios?","River Plate","Boca Juniors","Racing","San Lorenzo"],
+["¿Cuál es la capital de Alemania?","Berlín","Múnich","Hamburgo","Fráncfort"],
+["¿Qué hueso es el más largo del cuerpo humano?","El fémur","La tibia","El húmero","La clavícula"],
+["¿Quién escribió Romeo y Julieta?","William Shakespeare","Oscar Wilde","Miguel de Cervantes","Víctor Hugo"],
+["¿Qué planeta tarda más en dar la vuelta al Sol?","Neptuno","Marte","La Tierra","Mercurio"],
+["¿Cuál es el país más grande del mundo?","Rusia","Canadá","China","Estados Unidos"],
+["¿Qué cantante es conocida como la Reina del Pop?","Madonna","Beyoncé","Shakira","Lady Gaga"],
+["¿Cuánto es 25% de 200?","50","25","75","40"],
+["¿Qué ciudad se conoce como la París de América del Sur?","Buenos Aires","Montevideo","Santiago","Lima"],
+["¿Qué científica ganó dos premios Nobel?","Marie Curie","Rosalind Franklin","Ada Lovelace","Jane Goodall"],
+["¿Cuál es la capital de España?","Madrid","Barcelona","Sevilla","Valencia"],
+["¿Qué deporte tiene sets, games y saque?","El tenis","El golf","El béisbol","El hockey"],
+["¿Quién fue el autor del Himno Nacional Argentino?","Vicente López y Planes","Manuel Belgrano","Domingo F. Sarmiento","Esteban Echeverría"],
+["¿Qué metal tiene el símbolo Fe?","El hierro","El flúor","El fósforo","El plomo"],
+["¿En qué país están las pirámides de Guiza?","Egipto","México","Perú","Sudán"],
+["¿Qué escritor escribió Don Quijote de la Mancha?","Miguel de Cervantes","Lope de Vega","Federico García Lorca","Jorge Manrique"],
+["¿Cuál es el lago navegable más alto del mundo?","El Titicaca","El Nahuel Huapi","El Baikal","El Victoria"],
+["¿Qué banda británica cantó Hey Jude?","The Beatles","Queen","Rolling Stones","Pink Floyd"],
+["¿Cuánto es 9 × 8?","72","64","81","63"],
+["¿Qué país inventó la pizza?","Italia","Francia","España","Grecia"],
+["¿Quién fue el primer presidente de Estados Unidos?","George Washington","Abraham Lincoln","Thomas Jefferson","John Adams"],
+["¿Cuál es la capital de Colombia?","Bogotá","Medellín","Cali","Cartagena"],
+["¿Qué órgano del cuerpo humano puede regenerarse?","El hígado","El corazón","El pulmón","El cerebro"],
+["¿Qué danza nació en el Río de la Plata?","El tango","La salsa","El flamenco","La samba"],
+["¿Quién escribió El principito?","Antoine de Saint-Exupéry","Julio Verne","Lewis Carroll","Roald Dahl"],
+["¿Cuál es el ave nacional de Estados Unidos?","El águila calva","El cóndor","El halcón","El búho"],
+["¿Qué deporte se juega en Wimbledon?","El tenis","El golf","El cricket","El rugby"],
+["¿Cuánto es 17 + 28?","45","44","46","43"],
+["¿Qué país tiene más habitantes del mundo?","La India","China","Estados Unidos","Indonesia"],
+["¿Quién pintó La noche estrellada?","Vincent van Gogh","Claude Monet","Pablo Picasso","Salvador Dalí"],
+["¿Cuál es la capital de Portugal?","Lisboa","Oporto","Coímbra","Faro"],
+["¿Qué vitamina abunda en las naranjas?","La vitamina C","La vitamina D","La vitamina B12","La vitamina K"],
+["¿Qué famoso cantante argentino de rock formó Soda Stereo?","Gustavo Cerati","Charly García","Fito Páez","Andrés Calamaro"],
+["¿En qué año cayó el Muro de Berlín?","1989","1979","1999","1985"],
+["¿Qué instrumento tocaba principalmente Astor Piazzolla?","El bandoneón","El piano","La guitarra","El violín"],
+["¿Cuál es la capital de México?","Ciudad de México","Guadalajara","Monterrey","Cancún"],
+["¿Qué animal tiene tres corazones?","El pulpo","La ballena","El tiburón","El calamar gigante"],
+["¿Quién descubrió la penicilina?","Alexander Fleming","Louis Pasteur","Robert Koch","Jonas Salk"],
+["¿Cuánto es 11 × 11?","121","111","131","101"],
+["¿Qué país es famoso por los tulipanes y los molinos?","Holanda","Bélgica","Suiza","Dinamarca"],
+["¿Quién fue el autor de la novela Rayuela?","Julio Cortázar","Jorge Luis Borges","Ernesto Sabato","Manuel Puig"],
+["¿Cuál es el océano que baña la costa oeste de Sudamérica?","El Pacífico","El Atlántico","El Índico","El Antártico"],
+["¿Qué jugador de fútbol tiene más Balones de Oro?","Lionel Messi","Cristiano Ronaldo","Pelé","Maradona"],
+["¿Cuál es la capital de Suecia?","Estocolmo","Oslo","Copenhague","Helsinki"],
+["¿Qué planeta tiene un día más largo que su año?","Venus","Marte","Júpiter","Saturno"],
+["¿Quién compuso Las cuatro estaciones?","Antonio Vivaldi","Johann S. Bach","Georg F. Händel","Franz Schubert"],
+["¿Cuánto es 5 elevado al cubo?","125","25","75","100"],
+["¿Qué país regaló la Estatua de la Libertad a EE.UU.?","Francia","Inglaterra","España","Italia"],
+["¿Quién escribió El túnel y Sobre héroes y tumbas?","Ernesto Sabato","Julio Cortázar","Jorge Luis Borges","Roberto Arlt"],
+["¿Cuál es la capital de Noruega?","Oslo","Bergen","Trondheim","Stavanger"],
+["¿Qué órgano humano pesa alrededor de 1,4 kilos y controla el cuerpo?","El cerebro","El corazón","El hígado","El pulmón"],
+["¿En qué año se realizó la Revolución de Mayo en Argentina?","1810","1816","1806","1820"],
+["¿Qué banda cantó Bohemian Rhapsody?","Queen","The Beatles","Led Zeppelin","AC/DC"],
+["¿Cuál es la capital de Turquía?","Ankara","Estambul","Esmirna","Antalya"],
+["¿Qué científico formuló las leyes del movimiento y la gravedad?","Isaac Newton","Albert Einstein","Galileo Galilei","Stephen Hawking"],
+["¿Cuánto es 200 menos 37?","163","173","167","153"],
+["¿Qué país tiene la mayor población musulmana?","Indonesia","Arabia Saudita","Pakistán","Turquía"],
+["¿Quién fue el director de la película El secreto de sus ojos?","Juan José Campanella","Fernando Solanas","Lucrecia Martel","Pablo Trapero"],
+["¿Cuál es la capital de Finlandia?","Helsinki","Tampere","Turku","Oulu"],
+["¿Qué animal duerme hasta 22 horas por día?","El koala","El gato","El perezoso","El murciélago"],
+["¿Qué río pasa por París?","El Sena","El Támesis","El Danubio","El Rin"],
+["¿Quién pintó el Guernica?","Pablo Picasso","Salvador Dalí","Joan Miró","Francisco Goya"],
+["¿Cuánto es 13 + 19 + 8?","40","38","42","41"],
+["¿Qué país tiene la Torre Inclinada de Pisa?","Italia","Francia","España","Grecia"],
+["¿Quién fue el primer astronauta en el espacio?","Yuri Gagarin","Neil Armstrong","Buzz Aldrin","Alan Shepard"],
+["¿Cuál es la capital de Venezuela?","Caracas","Maracaibo","Valencia","Barquisimeto"],
+["¿Qué instrumento tiene pedales y cuerdas y se toca con las dos manos?","El arpa","El acordeón","La batería","El saxofón"],
+["¿Qué escritor escribió Crimen y castigo?","Fiódor Dostoievski","León Tolstói","Antón Chéjov","Nikolái Gógol"],
+["¿Cuánto es 6 × 7 + 5?","47","42","52","45"],
+["¿Qué país organizó los primeros Juegos Olímpicos modernos en 1896?","Grecia","Francia","Italia","Inglaterra"],
+["¿Qué banda argentina lideraba el Indio Solari?","Los Redondos","Soda Stereo","Los Piojos","La Renga"],
+["¿Cuál es la capital de Polonia?","Varsovia","Cracovia","Gdansk","Poznan"],
+["¿Qué mineral es el más duro de la naturaleza?","El diamante","El cuarzo","El rubí","El acero"],
+];
+const TRV_DIFICIL = [
+["¿Cuál es la capital de Mongolia?","Ulán Bator","Astaná","Taskent","Biskek"],
+["¿En qué año se publicó El origen de las especies de Darwin?","1859","1848","1871","1839"],
+["¿Qué elemento químico tiene el símbolo W?","El wolframio","El tungsteno libre","El hierro","El zinc"],
+["¿Quién fue el autor de la Divina Comedia?","Dante Alighieri","Petrarca","Boccaccio","Virgilio"],
+["¿Cuál es el país más pequeño del mundo?","El Vaticano","Mónaco","San Marino","Liechtenstein"],
+["¿Qué río es el más caudaloso del mundo?","El Amazonas","El Congo","El Nilo","El Yangtsé"],
+["¿En qué año terminó la Segunda Guerra Mundial?","1945","1944","1946","1939"],
+["¿Quién pintó Las meninas?","Diego Velázquez","Francisco Goya","El Greco","Bartolomé Murillo"],
+["¿Cuál es la capital de Nueva Zelanda?","Wellington","Auckland","Christchurch","Hamilton"],
+["¿Qué matemático griego demostró el teorema de la hipotenusa?","Pitágoras","Euclides","Arquímedes","Tales de Mileto"],
+["¿Cuánto es 17 × 6?","102","96","112","98"],
+["¿En qué ciudad se firmó la Declaración de Independencia de EE.UU.?","Filadelfia","Nueva York","Boston","Washington"],
+["¿Qué novela rusa empieza diciendo que las familias felices se parecen?","Anna Karénina","Guerra y paz","Los hermanos Karamázov","Doctor Zhivago"],
+["¿Cuál es la capital de Islandia?","Reikiavik","Oslo","Torshavn","Akureyri"],
+["¿Quién compuso la ópera El anillo del nibelungo?","Richard Wagner","Giuseppe Verdi","Mozart","Puccini"],
+["¿Qué hueso del oído es el más pequeño del cuerpo?","El estribo","El martillo","El yunque","La cóclea"],
+["¿En qué año se realizó la primera Guerra Mundial?","De 1914 a 1918","De 1910 a 1914","De 1918 a 1922","De 1939 a 1945"],
+["¿Cuál es la capital de Marruecos?","Rabat","Casablanca","Marrakech","Fez"],
+["¿Qué químico ruso ordenó la tabla periódica?","Dimitri Mendeléiev","Lavoisier","Bohr","Rutherford"],
+["¿Cuánto es 19 × 7?","133","126","140","119"],
+["¿Qué ciudad italiana es famosa por sus canales y góndolas?","Venecia","Florencia","Génova","Turín"],
+["¿Quién fue el emperador romano que legalizó el cristianismo?","Constantino","Nerón","Augusto","Trajano"],
+["¿Cuál es la capital de Vietnam?","Hanói","Ciudad Ho Chi Minh","Da Nang","Hue"],
+["¿Qué artista cortó su propia oreja?","Vincent van Gogh","Pablo Picasso","Claude Monet","Paul Gauguin"],
+["¿En qué año se estrenó la primera película de Star Wars?","1977","1980","1975","1983"],
+["¿Cuál es la capital de Tailandia?","Bangkok","Chiang Mai","Phuket","Pattaya"],
+["¿Quién escribió La metamorfosis?","Franz Kafka","Hermann Hesse","Thomas Mann","Stefan Zweig"],
+["¿Qué gas noble se usa en los carteles luminosos?","El neón","El argón","El helio","El xenón"],
+["¿Cuánto es 144 ÷ 16?","9","8","12","10"],
+["¿Cuál es la capital de Kenia?","Nairobi","Mombasa","Kisumu","Dar es Salaam"],
+["¿Quién fue el primer rey de Roma según la leyenda?","Rómulo","Remo","Numa Pompilio","Tarquinio"],
+["¿Qué filósofo escribió Así habló Zaratustra?","Friedrich Nietzsche","Arthur Schopenhauer","Immanuel Kant","Søren Kierkegaard"],
+["¿Cuál es la capital de Pakistán?","Islamabad","Karachi","Lahore","Peshawar"],
+["¿En qué año se disolvió la Unión Soviética?","1991","1989","1993","1985"],
+["¿Quién compuso el Clair de lune?","Claude Debussy","Maurice Ravel","Erik Satie","Gabriel Fauré"],
+["¿Cuánto es 15% de 300?","45","30","50","60"],
+["¿Cuál es la capital de Nigeria?","Abuya","Lagos","Kano","Ibadán"],
+["¿Qué científico descubrió la ley de la gravedad según la leyenda de la manzana?","Isaac Newton","Galileo Galilei","Johannes Kepler","Robert Hooke"],
+["¿Qué ciudad fue capital del Imperio bizantino?","Constantinopla","Roma","Atenas","Alejandría"],
+["¿Cuál es la capital de Indonesia?","Yakarta","Bali","Surabaya","Bandung"],
+["¿Quién escribió 1984 y Rebelión en la granja?","George Orwell","Aldous Huxley","Ray Bradbury","Franz Kafka"],
+["¿Qué elemento tiene el número atómico 1?","El hidrógeno","El helio","El litio","El carbono"],
+["¿En qué año se fundó la ONU?","1945","1919","1939","1950"],
+["¿Cuál es la capital de Kazajistán?","Astaná","Almatý","Taskent","Bakú"],
+["¿Quién pintó El jardín de las delicias?","El Bosco","Brueghel","Rembrandt","Vermeer"],
+["¿Cuánto es 23 × 4?","92","86","96","88"],
+["¿Qué guerra enfrentó a Atenas y Esparta?","La Guerra del Peloponeso","Las Guerras Médicas","La Guerra de Troya","Las Guerras Púnicas"],
+["¿Cuál es la capital de Ghana?","Acra","Kumasi","Abuya","Dakar"],
+["¿Quién descubrió la estructura del ADN junto a Watson?","Francis Crick","Marie Curie","Gregor Mendel","Linus Pauling"],
+["¿En qué año se inauguró el Canal de Panamá?","1914","1904","1924","1889"],
+["¿Cuál es la capital de Ucrania?","Kiev","Járkov","Odesa","Leópolis"],
+["¿Qué compositor quedó sordo y siguió creando música?","Beethoven","Mozart","Haydn","Schubert"],
+["¿Cuánto es 13 × 13?","169","159","179","149"],
+["¿Qué imperio construyó el Coliseo?","El Imperio romano","El Imperio griego","El Imperio otomano","El Imperio persa"],
+["¿Cuál es la capital de Croacia?","Zagreb","Split","Dubrovnik","Rijeka"],
+["¿Quién escribió El viejo y el mar?","Ernest Hemingway","John Steinbeck","William Faulkner","F. Scott Fitzgerald"],
+["¿Qué partícula subatómica tiene carga negativa?","El electrón","El protón","El neutrón","El positrón"],
+["¿En qué año se abolió la esclavitud en Brasil?","1888","1822","1850","1900"],
+["¿Cuál es la capital de Etiopía?","Adís Abeba","Nairobi","Jartum","Yibuti"],
+["¿Quién fue el último zar de Rusia?","Nicolás II","Alejandro III","Pedro el Grande","Iván el Terrible"],
+["¿Cuánto es 7 × 8 + 9?","65","56","72","63"],
+["¿Qué país europeo no tiene ejército y es famoso por sus bancos y chocolate?","Suiza","Austria","Bélgica","Luxemburgo"],
+["¿Cuál es la capital de Malasia?","Kuala Lumpur","Singapur","Penang","Yakarta"],
+["¿Quién pintó El grito?","Edvard Munch","Gustav Klimt","Egon Schiele","Paul Cézanne"],
+["¿En qué año se estrenó la película Titanic de James Cameron?","1997","1995","1999","2001"],
+["¿Cuál es la capital de Hungría?","Budapest","Viena","Praga","Bratislava"],
+["¿Qué novela de Cervantes es considerada la primera novela moderna?","Don Quijote","La Galatea","Persiles y Segismunda","Novelas ejemplares"],
+["¿Cuánto es 250 ÷ 25?","10","25","5","15"],
+["¿Qué ciudad estadounidense es la capital del jazz?","Nueva Orleans","Chicago","Nueva York","Memphis"],
+["¿Cuál es la capital de Filipinas?","Manila","Cebú","Dávao","Baguio"],
+["¿Quién fue el filósofo que murió bebiendo cicuta?","Sócrates","Platón","Aristóteles","Diógenes"],
+["¿En qué año se lanzó el primer iPhone?","2007","2005","2009","2010"],
+["¿Cuál es la capital de Rumania?","Bucarest","Cluj","Timisoara","Sofía"],
+["¿Qué físico tiene el premio Nobel por el efecto fotoeléctrico?","Albert Einstein","Niels Bohr","Max Planck","Werner Heisenberg"],
+["¿Cuánto es 18 × 5?","90","85","95","80"],
+["¿Qué civilización construyó Machu Picchu?","La inca","La maya","La azteca","La olmeca"],
+["¿Cuál es la capital de Bielorrusia?","Minsk","Kiev","Vilna","Riga"],
+["¿Quién compuso El lago de los cisnes?","Piotr I. Chaikovski","Ígor Stravinski","Serguéi Prokófiev","Nikolái Rimski-Kórsakov"],
+["¿En qué año se produjo la caída de Constantinopla?","1453","1492","1400","1517"],
+["¿Cuánto es 21 × 6?","126","116","136","120"],
+["¿Qué elemento químico tiene el símbolo Au?","El oro","La plata","El aluminio","El argón"],
+["¿Cuál es la capital de Líbano?","Beirut","Damasco","Amán","Jerusalén"],
+["¿Quién escribió Ulises, la novela irlandesa?","James Joyce","Oscar Wilde","Samuel Beckett","W. B. Yeats"],
+["¿Qué batalla marcó la derrota final de Napoleón?","Waterloo","Austerlitz","Trafalgar","Borodino"],
+["¿Cuánto es 96 ÷ 8?","12","14","16","10"],
+["¿Cuál es la capital de Serbia?","Belgrado","Sarajevo","Zagreb","Podgorica"],
+["¿Qué científico dio nombre a la unidad de corriente eléctrica?","André-Marie Ampère","Alessandro Volta","Georg Ohm","Michael Faraday"],
+["¿En qué año se estrenó la primera película sonora?","1927","1920","1935","1915"],
+["¿Cuál es la capital de Myanmar?","Naipyidó","Yangón","Mandalay","Bangkok"],
+["¿Quién fue el pintor de La persistencia de la memoria (los relojes blandos)?","Salvador Dalí","René Magritte","Joan Miró","Max Ernst"],
+["¿Cuánto es 14 × 9?","126","116","136","124"],
+["¿Qué océano es el más profundo?","El Pacífico","El Atlántico","El Índico","El Ártico"],
+["¿Cuál es la capital de Eslovaquia?","Bratislava","Liubliana","Praga","Budapest"],
+["¿Quién escribió En busca del tiempo perdido?","Marcel Proust","Gustave Flaubert","Émile Zola","Stendhal"],
+["¿Qué planeta tiene la mayor cantidad de lunas conocidas?","Saturno","Júpiter","Urano","Neptuno"],
+["¿Cuánto es 8 × 12 + 4?","100","96","104","92"],
+["¿Cuál es la capital de Bangladesh?","Daca","Calcuta","Katmandú","Colombo"],
+["¿Quién fue el conquistador del Imperio azteca?","Hernán Cortés","Francisco Pizarro","Pedro de Valdivia","Vasco Núñez de Balboa"],
+["¿En qué año se proclamó la República Popular China?","1949","1937","1955","1945"],
+["¿Cuál es la capital de Lituania?","Vilna","Riga","Tallin","Minsk"],
+];
+const TRV = {
+  TANDAS: { facil: TRV_FACIL, media: TRV_MEDIA, dificil: TRV_DIFICIL },
+  SEG: { facil: CFG.TRV_SEG[0], media: CFG.TRV_SEG[1], dificil: CFG.TRV_SEG[2] },
+  azar(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+  mezclar(a) { for (let i = a.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[k]; a[k] = t; } return a; },
+  /* dificultad creciente (análogo a RF.nivel): la mezcla de tandas sube cada TRV_CAMBIO_RONDAS rondas.
+     r1-2: solo fácil · r3-4: fácil+media · r5-6: media · r7-8: media+difícil · r9+: solo difícil */
+  tandasRonda(ronda) {
+    const niv = Math.min(4, Math.floor((ronda - 1) / CFG.TRV_CAMBIO_RONDAS));
+    return [["facil"], ["facil", "media"], ["media"], ["media", "dificil"], ["dificil"]][niv];
+  },
+  /* genera la pregunta: spec pública (pregunta + opciones ya barajadas) y solución solo en el host */
+  generar(ronda, excluir) {
+    const tandas = this.tandasRonda(ronda);
+    const tanda = this.azar(tandas);
+    const idx = ROTACION_TRV.elegir(tanda, excluir);
+    const e = this.TANDAS[tanda][idx];
+    const ops = e.slice(1);
+    this.mezclar(ops);
+    return { pub: { p: e[0], ops: ops, seg: this.SEG[tanda] }, sol: String(ops.indexOf(e[1])), id: tanda + ":" + idx };
+  }
+};
+/* rotación persistente por tanda: clave "facil:12" -> veces usada; no se repite hasta agotar la tanda */
+const ROTACION_TRV = {
+  clave: "cadena_uso_trv_v1",
+  uso: (() => { try { return JSON.parse(localStorage.getItem("cadena_uso_trv_v1")) || {}; } catch (e) { return {}; } })(),
+  elegir(tanda, excluir) {
+    const pool = TRV.TANDAS[tanda];
+    let cands = pool.map((e, i) => i).filter(i => !excluir.has(tanda + ":" + i));
+    if (!cands.length) cands = pool.map((e, i) => i);
+    let min = Infinity;
+    cands.forEach(i => { const u = this.uso[tanda + ":" + i] || 0; if (u < min) min = u; });
+    const top = cands.filter(i => (this.uso[tanda + ":" + i] || 0) === min);
+    const el = top[Math.floor(Math.random() * top.length)];
+    this.uso[tanda + ":" + el] = (this.uso[tanda + ":" + el] || 0) + 1;
+    try { localStorage.setItem(this.clave, JSON.stringify(this.uso)); } catch (e) {}
+    return el;
+  }
+};
+
+
+/* ========== 3g. MODO EL ORÁCULO MIENTE: pools propios + rotación persistente ==========
+   ORA_PREGUNTAS: 200 preguntas sobre el grupo (tonos gracioso / picante suave / absurdo / convivencia).
+   ORA_FALSAS: 60 frases falsas plantilla del Oráculo; algunas tienen el hueco {n} que el host
+   reemplaza por el nombre del jugador más votado de la ronda (o por un votado al azar si hay empate). */
+const ORA_PREGUNTAS = [
+"¿Quién de acá sobreviviría menos en una isla desierta?",
+"¿Quién de acá llegaría tarde a su propio casamiento?",
+"¿Quién de acá se olvidaría el mate en la primer salida al camping?",
+"¿Quién de acá es más probable que se haga viral sin querer?",
+"¿Quién de acá contesta los mensajes tres días después?",
+"¿Quién de acá lloraría más fuerte viendo una peli de perros?",
+"¿Quién de acá sobreviviría más en una casa embrujada?",
+"¿Quién de acá se comería la última empanada sin preguntar?",
+"¿Quién de acá es capaz de dormirse en cualquier lado?",
+"¿Quién de acá gritaría más fuerte con una cucaracha?",
+"¿Quién de acá organizaría el mejor asado del grupo?",
+"¿Quién de acá quemaría hasta el agua del mate?",
+"¿Quién de acá perdería el celular en su propia casa?",
+"¿Quién de acá habla dormido y cuenta todo?",
+"¿Quién de acá es más competitivo jugando a cualquier cosa?",
+"¿Quién de acá finge mejor cuando no entendió un chiste?",
+"¿Quién de acá se haría pasar por experto sin saber nada?",
+"¿Quién de acá bailaría primero en una fiesta sin música?",
+"¿Quién de acá aguantaría más sin mirar el celular?",
+"¿Quién de acá se gastaría todo el sueldo en boludeces?",
+"¿Quién de acá cuidaría mejor una planta?",
+"¿Quién de acá mataría un cactus en una semana?",
+"¿Quién de acá sería el primero en rendirse en un escape room?",
+"¿Quién de acá resolvería el escape room en tiempo récord?",
+"¿Quién de acá se haría el dormido para no ayudar a limpiar?",
+"¿Quién de acá caería primero en una estafa por internet?",
+"¿Quién de acá salvaría al grupo en un apocalipsis zombie?",
+"¿Quién de acá sería el primero en caer en el apocalipsis zombie?",
+"¿Quién de acá tiene el peor sentido de la orientación?",
+"¿Quién de acá se perdería yendo a la esquina?",
+"¿Quién de acá llenaría el grupo de fotos de su mascota?",
+"¿Quién de acá se comería el postre del otro sin culpa?",
+"¿Quién de acá ganaría un concurso de comida?",
+"¿Quién de acá cocinaría la cena más rara del grupo?",
+"¿Quién de acá sería el peor compañero de viaje?",
+"¿Quién de acá armaría el mejor itinerario de viaje?",
+"¿Quién de acá se olvidaría el pasaporte en casa?",
+"¿Quién de acá dormiría en el aeropuerto sin drama?",
+"¿Quién de acá grita los goles más fuerte?",
+"¿Quién de acá llora con los partidos de su equipo?",
+"¿Quién de acá dejaría todo por ir a ver a su equipo?",
+"¿Quién de acá no sabe ni el nombre del arquero?",
+"¿Quién de acá cantaría en un karaoke sin que lo inviten?",
+"¿Quién de acá nunca se subiría a un karaoke?",
+"¿Quién de acá tiene la peor voz pero canta igual?",
+"¿Quién de acá podría ser cantante de verdad?",
+"¿Quién de acá baila peor pero con más ganas?",
+"¿Quién de acá ganaría un concurso de baile?",
+"¿Quién de acá se quedaría hasta el final de la fiesta?",
+"¿Quién de acá se iría primero de la fiesta sin avisar?",
+"¿Quién de acá le tendría más miedo a una araña chiquita?",
+"¿Quién de acá adoptaría 5 gatos si pudiera?",
+"¿Quién de acá hablaría con los animales como si entendieran?",
+"¿Quién de acá se haría millonario y no le diría a nadie?",
+"¿Quién de acá contaría la lotería que se ganó a los cinco minutos?",
+"¿Quién de acá invertiría todo en un negocio rarísimo?",
+"¿Quién de acá sería el mejor jefe?",
+"¿Quién de acá sería el peor jefe y nadie querría trabajar con él?",
+"¿Quién de acá renunciaría con un discurso dramático?",
+"¿Quién de acá llegaría vestido de gala a un asado?",
+"¿Quién de acá iría de ojotas a un casamiento?",
+"¿Quién de acá repite siempre la misma ropa?",
+"¿Quién de acá tarda más en arreglarse para salir?",
+"¿Quién de acá sale en patas a comprar pan?",
+"¿Quién de acá guarda secretos mejor que una caja fuerte?",
+"¿Quién de acá cuenta un secreto en menos de una hora?",
+"¿Quién de acá se enteraría del chisme antes que todos?",
+"¿Quién de acá inventaría un chisme sin darse cuenta?",
+"¿Quién de acá sería detective y descubriría todo?",
+"¿Quién de acá confundiría al culpable siendo detective?",
+"¿Quién de acá ganaría un debate sin saber del tema?",
+"¿Quién de acá se reiría en el momento más serio?",
+"¿Quién de acá llora viendo publicidades?",
+"¿Quién de acá no llora ni con la película más triste?",
+"¿Quién de acá se haría amigo del mozo en cada restaurante?",
+"¿Quién de acá pediría la comida más rara del menú?",
+"¿Quién de acá pediría siempre lo mismo en todos lados?",
+"¿Quién de acá dejaría la mejor propina?",
+"¿Quién de acá pelearía la cuenta hasta el último centavo?",
+"¿Quién de acá pagaría la cuenta sin mirar?",
+"¿Quién de acá se haría el distraído cuando llega la cuenta?",
+"¿Quién de acá dividiría la cuenta con calculadora?",
+"¿Quién de acá sobreviviría un mes comiendo solo fideos?",
+"¿Quién de acá probaría la comida más picante sin dudar?",
+"¿Quién de acá no aguanta ni el chimichurri suave?",
+"¿Quién de acá desayunaría asado de ayer sin problema?",
+"¿Quién de acá toma mate a cualquier hora?",
+"¿Quién de acá cebaría los mates más lavados del mundo?",
+"¿Quién de acá nunca lava el mate?",
+"¿Quién de acá prepararía el tereré más rico?",
+"¿Quién de acá se olvidaría el cumpleaños de su mejor amigo?",
+"¿Quién de acá organiza los mejores cumpleaños sorpresa?",
+"¿Quién de acá arruinaría la sorpresa sin querer?",
+"¿Quién de acá regalaría lo primero que encontró en el súper?",
+"¿Quién de acá elegiría el mejor regalo del grupo?",
+"¿Quién de acá reenvolvería un regalo que le hicieron?",
+"¿Quién de acá se pondría a llorar abriendo un regalo?",
+"¿Quién de acá fingiría que le encantó el regalo más feo?",
+"¿Quién de acá ganaría en un amigo invisible por hacer el mejor papel?",
+"¿Quién de acá se quedaría con las ganas de decir algo y explotaría después?",
+"¿Quién de acá sería el primero en hacerse famoso?",
+"¿Quién de acá tendría un reality show insoportable pero exitoso?",
+"¿Quién de acá sería el mejor influencer del grupo?",
+"¿Quién de acá subiría stories de absolutamente todo?",
+"¿Quién de acá mira el celular en el cine?",
+"¿Quién de acá llora en el cine y después lo niega?",
+"¿Quién de acá spoilea las películas sin querer?",
+"¿Quién de acá pausaría la película cada cinco minutos para opinar?",
+"¿Quién de acá elegiría siempre la peor película del grupo?",
+"¿Quién de acá maratonaría una serie entera en un finde?",
+"¿Quién de acá se duerme a los diez minutos de cualquier peli?",
+"¿Quién de acá ve los capítulos sin el resto y después miente?",
+"¿Quién de acá tendría el playlist más raro del grupo?",
+"¿Quién de acá pone música triste en los asados?",
+"¿Quién de acá se sabe todas las letras de los temas de moda?",
+"¿Quién de acá escucharía la misma canción cien veces seguidas?",
+"¿Quién de acá ganaría un concurso de memes?",
+"¿Quién de acá mandaría audios de siete minutos?",
+"¿Quién de acá contesta con un ok a un testamento?",
+"¿Quién de acá escribe sin signos y no se entiende nada?",
+"¿Quién de acá revisaría tu ubicación cada diez minutos?",
+"¿Quién de acá llegaría una hora antes por las dudas?",
+"¿Quién de acá inventaría la excusa más ridícula para no venir?",
+"¿Quién de acá cae igual aunque le inventes un plan falso?",
+"¿Quién de acá sería el alma de la previa?",
+"¿Quién de acá se quedaría sin voz gritando en el recital?",
+"¿Quién de acá iría al recital más lejano del mundo?",
+"¿Quién de acá lloraría en el recital de su banda favorita?",
+"¿Quién de acá le robaría el mate a otro sin que se note?",
+"¿Quién de acá come más rápido que todos?",
+"¿Quién de acá mastica más despacio del universo?",
+"¿Quién de acá roncaría más fuerte en el camping?",
+"¿Quién de acá se despertaría primero y despertaría a todos?",
+"¿Quién de acá dormiría hasta el mediodía en el camping?",
+"¿Quién de acá armaría la carpa en cinco minutos?",
+"¿Quién de acá armaría la carpa al revés?",
+"¿Quién de acá prendería el fuego del asado a la primera?",
+"¿Quién de acá usaría un litro de alcohol y aún así nada?",
+"¿Quién de acá se llevaría toda la carne cruda a casa?",
+"¿Quién de acá se haría el parrillero sin saber prender el fuego?",
+"¿Quién de acá traería ensalada a un asado?",
+"¿Quién de acá se comería los chinchulines mientras se cocinan?",
+"¿Quién de acá criticaría el punto de la carne de otro?",
+"¿Quién de acá ganaría una competencia de truco?",
+"¿Quién de acá mentiría las cartas más descaradamente?",
+"¿Quién de acá se enojaría perdiendo al truco?",
+"¿Quién de acá se haría el humilde ganando todo?",
+"¿Quién de acá renunciaría a mitad de la partida?",
+"¿Quién de acá revisaría las reglas del juego en plena partida?",
+"¿Quién de acá inventaría reglas nuevas para ganar?",
+"¿Quién de acá sería el mejor padrastro o madrastra de un pez?",
+"¿Quién de acá le pondría nombre a su auto?",
+"¿Quién de acá lavaría el auto solo cuando llueve?",
+"¿Quién de acá chocaría estacionando sin autos alrededor?",
+"¿Quién de acá maneja más despacio que una abuela?",
+"¿Quién de acá aceleraría en cada semáforo?",
+"¿Quién de acá se pelearía con el GPS?",
+"¿Quién de acá seguiría las indicaciones del GPS al agua?",
+"¿Quién de acá memorizaría todas las rutas del país?",
+"¿Quién de acá sobreviviría una semana sin delivery?",
+"¿Quién de acá pediría delivery viviendo frente al restaurante?",
+"¿Quién de acá calificaría con una estrella por cualquier cosa?",
+"¿Quién de acá dejaría la reseña más dramática del lugar?",
+"¿Quién de acá sería cliente frecuente del mismo bar de siempre?",
+"¿Quién de acá se haría amigo del dueño del almacén?",
+"¿Quién de acá fiaría hasta el pan en el almacén?",
+"¿Quién de acá tendría una libreta de fiado más larga que el tango?",
+"¿Quién de acá pagaría sus deudas a tiempo siempre?",
+"¿Quién de acá se olvidaría que le deben plata?",
+"¿Quién de acá cobraría hasta un caramelo prestado?",
+"¿Quién de acá prestaría plata y no la cobraría nunca?",
+"¿Quién de acá organizaría un fondo común del grupo?",
+"¿Quién de acá se robaría del fondo común sin darse cuenta?",
+"¿Quién de acá ganaría en el Quini y seguiría laburando igual?",
+"¿Quién de acá dejaría el laburo con un cacho de lotería?",
+"¿Quién de acá invertiría en algo que nadie entiende?",
+"¿Quién de acá explicaría criptomonedas sin saber nada?",
+"¿Quién de acá caería en una pirámide de inversión?",
+"¿Quién de acá rescataría al grupo de una mala inversión?",
+"¿Quién de acá tendría una huerta y le hablaría a las plantas?",
+"¿Quién de acá mataría hasta el pasto del jardín?",
+"¿Quién de acá cosecharía los mejores tomates del barrio?",
+"¿Quién de acá tendría el balcón más lindo del edificio?",
+"¿Quién de acá dejaría morir el helecho más fácil del mundo?",
+"¿Quién de acá acamparía en el balcón por no pagar hotel?",
+"¿Quién de acá llevaría el mate hasta a la ducha?",
+"¿Quién de acá se ducharía en cinco minutos con agua fría?",
+"¿Quién de acá se ducharía una hora y dejaría el baño inundado?",
+"¿Quién de acá usaría el shampoo de todos menos el suyo?",
+"¿Quién de acá tendría el baño más prolijo del grupo?",
+"¿Quién de acá dejaría el cepillo de dientes en cualquier lado?",
+"¿Quién de acá etiquetaría sus cosas en la heladera?",
+"¿Quién de acá comería la comida etiquetada de otro?",
+"¿Quién de acá limpiaría la heladera sin que le pidan?",
+"¿Quién de acá no limpiaría ni a punta de pistola?",
+"¿Quién de acá ordenaría el cuarto como tienda de ropa?",
+"¿Quién de acá perdería las llaves dentro del bolso?",
+"¿Quién de acá tendría un llavero con cincuenta llaveros?",
+"¿Quién de acá llamaría al cerrajero una vez por mes?",
+"¿Quién de acá dejaría la llave puesta del lado de afuera?",
+];
+const ORA_FALSAS = [
+"Porque le conozco hace años y es así, no hay vuelta que darle.",
+"Por algo todos lo pensamos aunque nadie lo diga en voz alta.",
+"Es que tiene cara de que le pasaría exactamente eso.",
+"Porque una vez me contó algo y desde entonces lo tengo clarísimo.",
+"Porque es de manual, no falla nunca con esa.",
+"Le conozco y sé que sería el primero en mandarse esa.",
+"Porque siempre hace lo mismo, es predecible con eso.",
+"Es simple: mirá cómo se comporta en las juntadas y listo.",
+"Porque ya le pasó una vez y casi seguro le vuelve a pasar.",
+"No es maldad, es que es evidente para cualquiera que lo mire.",
+"Porque tiene ese no sé qué que grita que es él o ella.",
+"Es que lo veo haciéndolo y ni siquiera estoy exagerando.",
+"Porque de todo el grupo es el que más ficha junta para eso.",
+"Es de esas cosas que se notan a la legua, no hace falta explicar.",
+"Porque me consta, me lo dijo alguna vez sin darse cuenta.",
+"Es el perfil perfecto para eso, hasta se lo diría en la cara.",
+"Porque en cada juntada hace algo que lo confirma.",
+"Es que si tuviera que apostar, pondría todo a que es así.",
+"Porque no hay uno del grupo que no haya pensado lo mismo.",
+"Es de esos que parecen tranquis pero después hacen exactamente eso.",
+"Porque cuando menos te lo esperás, ahí aparece con esa.",
+"Es una certeza absoluta, no necesito ni pensarlo dos veces.",
+"Porque su historial habla por sí solo, no hace falta que explique.",
+"Es que conozco casos concretos, no hablo por hablar.",
+"Porque si hacemos memoria, todos nos acordamos de alguna de esas.",
+"Es que es su especialidad, nadie lo hace mejor que él o ella.",
+"Porque es imposible imaginar a otro del grupo haciendo eso.",
+"Es que si no es él o ella, ya no sé en quién confiar.",
+"Porque tiene todas las credenciales para llevarse ese título.",
+"Es que hasta su mamá estaría de acuerdo con este voto, fija.",
+"Porque lo vi en acción más de una vez y no me queda duda.",
+"Es de esas personas que para eso no tienen competencia.",
+"Porque cada vez que pasa algo así, su nombre sale solo.",
+"Es que si existiera un torneo de eso, saldría campeón invicto.",
+"Porque su currículum en ese tema es larguísimo y conocido.",
+"Es que no hace falta ser el Oráculo para verlo, es obvio.",
+"Porque {n} siempre fue así y no va a cambiar ahora.",
+"Es que {n} tiene un don especial para ese tipo de cosas.",
+"Porque si hay alguien capaz de eso acá, es {n} sin dudar.",
+"Es que {n} lo hace hasta sin querer, le sale natural.",
+"Porque {n} ya demostró mil veces que para eso no tiene rival.",
+"Es que con {n} no hay sorpresa: es su marca registrada.",
+"Porque {n} una vez lo hizo y desde ahí no hay discusión posible.",
+"Es que {n} junta todas las condiciones, no le falta ni una.",
+"Porque si preguntás afuera del grupo, todos dirían {n} también.",
+"Es que {n} se esfuerza por parecer otra cosa, pero no le sale.",
+"Porque {n} tiene cara de inocente y ahí está el truco.",
+"Es que nadie lo admitiría, pero todos sabemos que es {n}.",
+"Porque {n} podría dar cátedra de eso si quisiera.",
+"Es que {n} no puede evitarlo, es más fuerte que él o ella.",
+"Porque el resto estamos aprendiendo, pero {n} ya nació sabiendo eso.",
+"Es que la estadística no miente: siempre termina siendo {n}.",
+"Porque si lo pensás fríamente, {n} es la respuesta lógica.",
+"Es que {n} se delata solo, no hace falta que nadie lo acuse.",
+"Porque entre todos, {n} es el que más pinta tiene para eso.",
+"Es que {n} ya lo intentó disimular y le salió peor todavía.",
+"Porque {n} es de los que dicen que no y terminan haciéndolo igual.",
+"Es que {n} tiene toda la pinta, toda la historia y toda la técnica.",
+"Porque no hay escenario posible donde no sea {n} el elegido.",
+"Es que {n} lleva años entrenando para eso sin saberlo.",
+];
+const ROTACION_ORA = {
+  clave: "cadena_uso_ora_v1",
+  uso: (() => { try { return JSON.parse(localStorage.getItem("cadena_uso_ora_v1")) || {}; } catch (e) { return {}; } })(),
+  elegir(pool, excluir, prefijo) {
+    let cands = pool.map((e, i) => i).filter(i => !excluir.has(prefijo + ":" + i));
+    if (!cands.length) cands = pool.map((e, i) => i);
+    let min = Infinity;
+    cands.forEach(i => { const u = this.uso[prefijo + ":" + i] || 0; if (u < min) min = u; });
+    const top = cands.filter(i => (this.uso[prefijo + ":" + i] || 0) === min);
+    const el = top[Math.floor(Math.random() * top.length)];
+    this.uso[prefijo + ":" + el] = (this.uso[prefijo + ":" + el] || 0) + 1;
+    try { localStorage.setItem(this.clave, JSON.stringify(this.uso)); } catch (e) {}
+    return el;
+  }
+};
+const ORA = {
+  azar(arr) { return arr[Math.floor(Math.random() * arr.length)]; },
+  mezclar(a) { for (let i = a.length - 1; i > 0; i--) { const k = Math.floor(Math.random() * (i + 1)); const t = a[i]; a[i] = a[k]; a[k] = t; } return a; },
+  /* cantidad de frases falsas del Oráculo por ronda: 1 con pocos, 2 con 6+ jugadores */
+  cantFalsas(nJug) { return nJug >= 6 ? 2 : 1; },
+  /* arma una frase falsa reemplazando el hueco {n} por el nombre del más votado (o un votado al azar) */
+  fraseFalsa(plantilla, masVotados, votados) {
+    if (plantilla.indexOf("{n}") < 0) return plantilla;
+    const candidatos = (masVotados && masVotados.length) ? masVotados : votados;
+    const nombre = candidatos && candidatos.length ? this.azar(candidatos) : "el elegido";
+    return plantilla.split("{n}").join(nombre);
+  }
+};
+
+const AV = e => /\.png$/.test(e || "")
+  ? `<img class="av-img" src="img/animales/${e}" alt="">`
+  : `<span class="av-real">${e || ""}</span>`;
 const LOCAL = { soyHost: false, miId: null, nombre: "", emoji: CFG.EMOJIS[0], codigo: null, enSala: false };
 
 /* ========== 3b. DICCIONARIO ES + EN (valida el host) ========== */
@@ -834,6 +1997,10 @@ const NET = {
       else if (GAME.state.ronda !== rondaAntes) GAME.prepararRonda(sig);
       else GAME.continuarTurno(sig, false);
     }
+    if (GAME.state.fase === "jugando" && GAME.state.modo === "oraculo") {
+      /* si el que se fue era el único que faltaba votar/adivinar, la etapa se destraba sola */
+      if (!GAME.chequearFin()) GAME.oraChequearCompleto();
+    }
     this.broadcastState(); UI.render();
   },
 
@@ -871,6 +2038,16 @@ const NET = {
       else if (msg.data.kind === "letra" && GAME.state.bombaEn === conn.peer) {
         GAME.intentarLetra(conn.peer, msg.data.letra, msg.data.nonce);
       }
+      else if (msg.data.kind === "rf" && GAME.state.bombaEn === conn.peer) {
+        GAME.intentarReflejo(conn.peer, msg.data.a, msg.data.nonce);
+      }
+      else if (msg.data.kind === "trv" && GAME.state.bombaEn === conn.peer) {
+        GAME.intentarTrivia(conn.peer, msg.data.a, msg.data.nonce);
+      }
+      else if (msg.data.kind === "ora") {
+        /* el oráculo no usa bomba: cualquier jugador activo manda su voto/adivinanza en su etapa */
+        GAME.recibirOra(conn.peer, msg.data);
+      }
     }
   },
 
@@ -887,7 +2064,7 @@ const NET = {
   /* v21: tick liviano de contadores (1/seg) — evita re-enviar todo el estado por cada segundo */
   broadcastTick() {
     const st = GAME.state;
-    const paquete = { t: "tick", data: { s: st.turnoSeg, a: st.anuncioSeg, r: st.revesSeg } };
+    const paquete = { t: "tick", data: { s: st.turnoSeg, a: st.anuncioSeg, r: st.revesSeg, o: (st.ora && st.ora.etapaSeg != null) ? st.ora.etapaSeg : null } };
     this.conns.forEach(c => { try { if (c.open) c.send(paquete); } catch (e) {} });
   },
   broadcastEvent(kind, data) {
@@ -962,15 +2139,35 @@ const NET = {
     if (msg.t === "pong") return;
     if (msg.t === "tick") {   // v21: solo cambian los contadores → refresco liviano
       GAME.state.turnoSeg = msg.data.s; GAME.state.anuncioSeg = msg.data.a; GAME.state.revesSeg = msg.data.r;
+      if (GAME.state.ora && msg.data.o != null) GAME.state.ora.etapaSeg = msg.data.o;
       UI.renderTick(); return;
     }
     if (msg.t === "state") {
       const faseAnterior = GAME.state.fase;
       const bombaAntes = GAME.state.bombaEn;
       GAME.state = msg.full;
-      UI.render();
-      // sincronización idempotente de pantalla: siempre mostrar la que corresponde a la fase
-      UI.sincronizarPantalla(faseAnterior);
+      /* v26: si llegan varios estados casi juntos (celu lento que venía atrasado),
+         se aplica cada estado pero se PINTA una sola vez por frame. Antes, cada
+         mensaje re-armaba todo el DOM y el celu de gama baja entraba en bola de
+         nieve: renderizaba más lento → se encolaban más mensajes → más lento. */
+      if (this._pendFase == null) this._pendFase = faseAnterior;
+      if (!this._renderProg) {
+        this._renderProg = true;
+        const pintar = () => {
+          if (!this._renderProg) return;
+          this._renderProg = false;
+          const fa = this._pendFase; this._pendFase = null;
+          UI.render();
+          // sincronización idempotente de pantalla: siempre mostrar la que corresponde a la fase
+          UI.sincronizarPantalla(fa);
+        };
+        if (typeof requestAnimationFrame === "function" && !document.hidden) {
+          requestAnimationFrame(pintar);
+          /* red de seguridad por si la app queda en segundo plano (rAF no corre ahí) */
+          setTimeout(pintar, 250);
+        } else setTimeout(pintar, 0);
+      }
+      /* la lógica de "me tocó la bomba" sigue siendo por mensaje (es baratísima) */
       if (GAME.state.fase === "jugando" && GAME.state.bombaEn === LOCAL.miId && bombaAntes !== LOCAL.miId) {
         UI.turnoFresco();  // casillero vacío al arrancar mi turno
         AUDIO.tick(); UI.vibrar([60]);
@@ -1004,7 +2201,8 @@ const GAME = {
     palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {},
     modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null, ahoCat: null,
     revesPalabra: null, revesSeg: null,
-    ahoMask: null, ahoOpciones: null, ahoCompleta: null
+    ahoMask: null, ahoOpciones: null, ahoCompleta: null,
+    rf: null, trv: null, ora: null
   },
   bombaTimer: null,
   ultimoNonce: {},
@@ -1017,6 +2215,19 @@ const GAME = {
   ahoPartida: new Set(),          /* palabras del ahorcado ya usadas en ESTA partida */
   ahoPalabra: null,               /* palabra actual (solo host, oculta) */
   ahoReveladas: new Set(),        /* letras ya reveladas de la palabra actual */
+  rfInt: null,                    /* intervalo del contador del microjuego (reflejos) */
+  rfSol: null,                    /* respuesta correcta del microjuego actual (solo host) */
+  trvInt: null,                   /* intervalo del contador de la pregunta (trivia) */
+  trvSol: null,                   /* índice de la opción correcta (trivia, solo host) */
+  trvPartida: new Set(),          /* preguntas de trivia ya usadas en ESTA partida ("tanda:idx") */
+  oraInt: null,                   /* intervalo del contador de etapa (oráculo) */
+  oraVotos: {},                   /* votos de la ronda: jugadorId -> {voto, texto} (oráculo, solo host) */
+  oraGuess: {},                   /* adivinanzas de la ronda: jugadorId -> {fraseId: autorGuess} (solo host) */
+  oraAutores: {},                 /* verdad de la ronda: fraseId -> playerId | "ORA" (solo host) */
+  oraPartida: new Set(),          /* preguntas del oráculo ya usadas en ESTA partida */
+  oraFalsasPartida: new Set(),    /* frases falsas ya usadas en ESTA partida */
+  rfInicio: 0,                    /* cuándo arrancó el microjuego actual (para validar "quieto") */
+  rfUsados: [],                   /* últimos tipos de microjuego usados (para no repetir seguido) */
   consignasPartida: new Set(),    /* consignas ya usadas en ESTA partida (no repetir dentro) */
   enPausa: false,   // FIX QA: true durante la pausa post-explosión (nadie tiene la bomba)
   /* --- orden de turnos por ronda (solo host): cada ronda arranca en un jugador al azar --- */
@@ -1064,7 +2275,7 @@ const GAME = {
     return null;
   },
   statDe(id) {
-    if (!this.state.stats[id]) this.state.stats[id] = { quemado: 0, pasadas: 0, masLargo: 0 };
+    if (!this.state.stats[id]) this.state.stats[id] = { quemado: 0, pasadas: 0, masLargo: 0, puntos: 0, oraAdivino: 0, oraEngano: 0, oraVecesElegido: 0 };
     return this.state.stats[id];
   },
   /* Consigna normal desde el pool con rotación persistente (las palabras usadas NO se limpian: duran toda la partida) */
@@ -1090,7 +2301,7 @@ const GAME = {
   /* Arranque de ronda: si toca especial, primero el anuncio para todos con cuenta regresiva */
   prepararRonda(primeroId) {
     if (primeroId == null) { this.chequearFin(); return; }
-    if (this.state.modo === "ahorcado") { this.pasarBombaA(primeroId); return; }
+    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia") { this.pasarBombaA(primeroId); return; }
     if (this.state.modo === "clasico" && Math.random() < CFG.PROB_REVES) {
       this.state.reglaActual = this.reglaReves();
       this.anunciarEspecial(primeroId);
@@ -1149,7 +2360,7 @@ const GAME = {
   },
   /* Continuación de turno dentro de la misma ronda (pase válido, explosión o desconexión) */
   continuarTurno(sig, escalar) {
-    if (this.state.modo === "ahorcado") { this.pasarBombaA(sig); return; }
+    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia") { this.pasarBombaA(sig); return; }
     if (this.state.esEspecial && this.state.reglaActual && this.state.reglaActual.tipo === "reves") { this.mostrarPalabraReves(sig); return; }
     if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
     else if (escalar && this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
@@ -1175,6 +2386,9 @@ const GAME = {
     if (!LOCAL.soyHost) return;
     const activos = this.state.jugadores.filter(j => j.conectado);
     if (activos.length < CFG.MIN_JUG) { UI.banner("Faltan jugadores conectados para arrancar.", null, true); setTimeout(() => UI.ocultarBanner(), 2500); return; }
+    /* FIX QA v25: el lobby deshabilita el Oráculo con menos de 3, pero si alguien se desconecta con el modo ya elegido
+       el host podría arrancar igual; esta guardia lo corta también del lado del juego. */
+    if (this.state.modo === "oraculo" && activos.length < CFG.ORA_MIN_JUG) { UI.banner("El Or\u00e1culo necesita al menos " + CFG.ORA_MIN_JUG + " jugadores conectados.", null, true); setTimeout(() => UI.ocultarBanner(), 2500); return; }
     DICC.cargar();
     this.limpiarTimer(); this.enPausa = false; this.ultimoNonce = {};
     this.consignasPartida = new Set();
@@ -1189,12 +2403,31 @@ const GAME = {
     this.revesPartida = new Set(); this.revesObjetivo = null;
     this.state.ahoMask = null; this.state.ahoOpciones = null; this.state.ahoCompleta = null; this.state.ahoCat = null;
     this.ahoPartida = new Set(); this.ahoPalabra = null; this.ahoReveladas = new Set();
+    this.state.rf = null; this.rfSol = null; this.rfUsados = [];
+    this.state.trv = null; this.trvSol = null; this.trvPartida = new Set();
+    this.state.ora = null; this.oraVotos = {}; this.oraGuess = {}; this.oraAutores = {};
+    this.oraPartida = new Set(); this.oraFalsasPartida = new Set();
     this.nuevaRonda(null);
     if (this.state.modo === "mecha") { this.iniciarMecha(); this.arrancarTick(); }
     if (this.state.modo === "ahorcado") {
       this.state.reglaActual = { id: "ahorcado", tipo: "ahorcado", flag: "", texto: "\u{1F524} AHORCADO EXPR\u00c9S: toc\u00e1 la letra que sigue en la palabra" };
       this.state.esEspecial = false;
       this.nuevaPalabraAho();
+    }
+    if (this.state.modo === "reflejos") {
+      this.state.reglaActual = { id: "reflejos", tipo: "reflejos", flag: "", texto: "\u26A1 DUELO DE REFLEJOS: resolv\u00e9 el desaf\u00edo antes de que explote" };
+      this.state.esEspecial = false;
+    }
+    if (this.state.modo === "trivia") {
+      this.state.reglaActual = { id: "trivia", tipo: "trivia", flag: "", texto: "\u2753 TRIVIA CON BOMBA: acert\u00e1 la pregunta antes del contador o explot\u00e1s" };
+      this.state.esEspecial = false;
+    }
+    if (this.state.modo === "oraculo") {
+      this.state.reglaActual = { id: "oraculo", tipo: "oraculo", flag: "", texto: "\u{1F52E} EL OR\u00c1CULO MIENTE: vot\u00e1, escrib\u00ed tu excusa y desenmascar\u00e1 al resto" };
+      this.state.esEspecial = false;
+      NET.broadcastState(); UI.irJuego();
+      this.oraEmpezarRonda();
+      return;
     }
     this.prepararRonda(this.orden[0]);
     NET.broadcastState(); UI.irJuego();
@@ -1205,6 +2438,8 @@ const GAME = {
     this.state.bombaEn = id; this.state.palabraActual = "";
     if (this.state.modo === "mecha") { this.limpiarTimer(); this.nuevaTenencia(); this.arrancarTick(); }
     else if (this.state.modo === "ahorcado") { this.generarOpcionesAho(); this.armarTimerAho(); }
+    else if (this.state.modo === "reflejos") { this.generarReflejo(); this.armarTimerRf(); }
+    else if (this.state.modo === "trivia") { this.generarTrivia(); this.armarTimerTrv(); }
     else this.armarTimer();
     NET.broadcastState(); UI.render();
     if (id === LOCAL.miId) { UI.turnoFresco(); AUDIO.tick(); UI.vibrar([60]); }
@@ -1388,6 +2623,314 @@ const GAME = {
     }, CFG.A_COMPLETA_SEG * 1000);
   },
 
+  /* ===== MODO DUELO DE REFLEJOS (solo host) ===== */
+  generarReflejo() {
+    const g = RF.generar(this.state.ronda, this.rfUsados);
+    this.state.rf = g.pub;
+    this.rfSol = g.sol;
+    this.rfInicio = Date.now();
+  },
+  armarTimerRf() {
+    this.limpiarTimer();
+    this.state.turnoSeg = this.state.rf ? this.state.rf.seg : 8;
+    this.rfInt = setInterval(() => {
+      if (this.enPausa || this.state.fase !== "jugando") return;
+      this.state.turnoSeg--;
+      if (this.state.turnoSeg <= 0) { this.explota(); return; }
+      if (this.state.bombaEn === LOCAL.miId && this.state.turnoSeg <= 3) AUDIO.tick();
+      NET.broadcastTick(); UI.renderTick();
+    }, 1000);
+  },
+  intentarReflejo(deId, a, nonce) {
+    if (this.enPausa) return;
+    if (this.state.modo !== "reflejos" || this.state.fase !== "jugando") return;
+    if (this.state.bombaEn !== deId) return;
+    if (nonce != null && this.ultimoNonce[deId] === nonce) return;
+    if (nonce != null) this.ultimoNonce[deId] = nonce;
+    const rf = this.state.rf;
+    if (!rf) return;
+    const resp = String(a == null ? "" : a);
+    let ok = false, motivo = "\u00a1Fallaste!";
+    if (rf.tipo === "mantener") {
+      const ms = parseInt(resp, 10);
+      ok = isFinite(ms) && Math.abs(ms - rf.obj * 1000) <= rf.tol;
+      if (isFinite(ms) && !ok) motivo = "Fueron " + (ms / 1000).toFixed(2).replace(".", ",") + "s\u2026 \u00a1no era eso!";
+    } else if (rf.tipo === "quieto") {
+      ok = resp === "ok" && (Date.now() - this.rfInicio) >= rf.espera * 1000 - 600;
+      motivo = "\u00a1Tocaste! Hab\u00eda que quedarse quieto\u2026";
+    } else if (rf.tipo === "semaforo") {
+      ok = resp === "ok" && (Date.now() - this.rfInicio) >= rf.rojoMs - 600;
+      motivo = "\u00a1Te adelantaste! Hab\u00eda que esperar el verde\u2026";
+    } else if (rf.tipo === "frenar") {
+      const p = parseInt(resp, 10);
+      ok = isFinite(p) && p >= rf.zi && p <= rf.zf;
+      if (isFinite(p) && !ok) motivo = "La frenaste fuera de la zona\u2026";
+    } else if (rf.tipo === "reves") {
+      ok = DICC.normalizar(resp) === this.rfSol;
+      motivo = "As\u00ed no es. \u00a1Al rev\u00e9s, letra por letra!";
+    } else if (rf.tipo === "copiar") {
+      ok = DICC.normalizar(resp) === this.rfSol;
+      motivo = "No era exactamente as\u00ed\u2026";
+    } else if (rf.tipo === "anagrama") {
+      const t = DICC.normalizar(resp);
+      const mismasLetras = t.split("").sort().join("") === this.rfSol.split("").sort().join("");
+      ok = t === this.rfSol || (mismasLetras && DICC.existe(t));
+      motivo = "Esa no sale con esas letras\u2026";
+    } else {
+      ok = resp === this.rfSol;
+      if (rf.tipo === "deslizar") motivo = "\u00a1Para ah\u00ed no era!";
+      if (rf.tipo === "memoria") motivo = "Esa no era la secuencia\u2026";
+      if (rf.tipo === "orden") motivo = "Ese no era el orden\u2026";
+      if (rf.tipo === "dobleimpostor") motivo = "Esos no eran los dos impostores\u2026";
+    }
+    if (!ok) {
+      NET.broadcastEvent("invalida", { id: deId, motivo });
+      if (deId === LOCAL.miId) { UI.feedbackMal(motivo); AUDIO.error(); }
+      this.explota();
+      return;
+    }
+    const s = this.statDe(deId);
+    s.pasadas++;
+    NET.broadcastEvent("paso", { id: deId });
+    if (deId === LOCAL.miId) AUDIO.pop();
+    this.limpiarTimer();
+    this.state.turnoSeg = null;
+    const sig = this.proximoTurno(deId);
+    if (sig == null) { this.chequearFin(); return; }
+    this.pasarBombaA(sig);
+  },
+
+  /* ===== MODO TRIVIA CON BOMBA (solo host): mismo patrón que Reflejos ===== */
+  generarTrivia() {
+    const g = TRV.generar(this.state.ronda, this.trvPartida);
+    this.trvPartida.add(g.id);
+    this.state.trv = g.pub;
+    this.trvSol = g.sol;
+  },
+  armarTimerTrv() {
+    this.limpiarTimer();
+    this.state.turnoSeg = this.state.trv ? this.state.trv.seg : 10;
+    this.trvInt = setInterval(() => {
+      if (this.enPausa || this.state.fase !== "jugando") return;
+      this.state.turnoSeg--;
+      if (this.state.turnoSeg <= 0) { this.explota(); return; }
+      if (this.state.bombaEn === LOCAL.miId && this.state.turnoSeg <= 3) AUDIO.tick();
+      NET.broadcastTick(); UI.renderTick();
+    }, 1000);
+  },
+  intentarTrivia(deId, a, nonce) {
+    if (this.enPausa) return;
+    if (this.state.modo !== "trivia" || this.state.fase !== "jugando") return;
+    if (this.state.bombaEn !== deId) return;
+    if (nonce != null && this.ultimoNonce[deId] === nonce) return;
+    if (nonce != null) this.ultimoNonce[deId] = nonce;
+    const trv = this.state.trv;
+    if (!trv) return;
+    const resp = String(a == null ? "" : a);
+    if (resp !== this.trvSol) {
+      const motivo = "\u00a1Respuesta equivocada!";
+      NET.broadcastEvent("invalida", { id: deId, motivo });
+      if (deId === LOCAL.miId) { UI.feedbackMal(motivo); AUDIO.error(); }
+      this.explota();
+      return;
+    }
+    const s = this.statDe(deId);
+    s.pasadas++;
+    NET.broadcastEvent("paso", { id: deId });
+    if (deId === LOCAL.miId) AUDIO.pop();
+    this.limpiarTimer();
+    this.state.turnoSeg = null;
+    this.state.trv = null; this.trvSol = null;
+    const sig = this.proximoTurno(deId);
+    if (sig == null) { this.chequearFin(); return; }
+    this.pasarBombaA(sig);
+  },
+
+  /* ===== MODO EL ORÁCULO MIENTE (solo host): modos social por rondas, sin bomba ni vidas ===== */
+  oraJugadoresActivos() { return this.state.jugadores.filter(x => x.conectado && x.vidas > 0); },
+  oraEmpezarRonda() {
+    this.limpiarTimer();
+    this.oraVotos = {}; this.oraGuess = {}; this.oraAutores = {}; this.oraMasVotado = [];
+    const idx = ROTACION_ORA.elegir(ORA_PREGUNTAS, this.oraPartida, "p");
+    this.oraPartida.add("p:" + idx);
+    this.state.ora = {
+      etapa: "votar",
+      pregunta: ORA_PREGUNTAS[idx],
+      votaron: [],                 /* ids que ya mandaron su voto / su adivinanza (progreso público) */
+      frases: null, autores: null, detalle: null,
+      puntosRonda: null, masVotado: null,
+      etapaSeg: CFG.ORA_SEG_VOTAR
+    };
+    this.oraArmarTimer(CFG.ORA_SEG_VOTAR, () => this.oraArmarAdivinar());
+  },
+  /* contador visible de la etapa: corre para todos vía broadcastTick (campo o) */
+  oraArmarTimer(seg, alTerminar) {
+    if (this.oraInt) { clearInterval(this.oraInt); this.oraInt = null; }
+    if (this.state.ora) this.state.ora.etapaSeg = seg;
+    NET.broadcastState(); UI.render();
+    this.oraInt = setInterval(() => {
+      if (this.state.fase !== "jugando" || !this.state.ora) return;
+      this.state.ora.etapaSeg--;
+      if (this.state.ora.etapaSeg <= 0) { clearInterval(this.oraInt); this.oraInt = null; alTerminar(); return; }
+      NET.broadcastTick(); UI.renderTick();
+    }, 1000);
+  },
+  /* entrada de red propia del modo: kind "ora" con sub-etapa y nonce anti-doble-envío */
+  recibirOra(deId, data) {
+    if (this.state.modo !== "oraculo" || this.state.fase !== "jugando" || !this.state.ora) return;
+    const j = this.state.jugadores.find(x => x.id === deId);
+    if (!j || !j.conectado || j.vidas <= 0) return;
+    const nonce = data && data.nonce;
+    if (nonce != null && this.ultimoNonce["ora:" + deId] === nonce) return;
+    if (nonce != null) this.ultimoNonce["ora:" + deId] = nonce;
+    const ora = this.state.ora;
+    if (ora.etapa === "votar" && data.sub === "votar") {
+      if (this.oraVotos[deId]) return;                              /* un solo voto por jugador */
+      const voto = String(data.voto || "");
+      const texto = String(data.texto || "").trim().slice(0, CFG.ORA_MAX_CHARS);
+      const existe = this.state.jugadores.some(x => x.id === voto && x.conectado && x.vidas > 0);
+      if (!existe || texto.length < 3) return;
+      this.oraVotos[deId] = { voto, texto };
+      if (ora.votaron.indexOf(deId) < 0) ora.votaron.push(deId);
+      if (deId === LOCAL.miId) AUDIO.pop();
+      NET.broadcastState(); UI.render();
+      this.oraChequearCompleto();
+    } else if (ora.etapa === "adivinar" && data.sub === "adivinar") {
+      if (this.oraGuess[deId]) return;
+      const mapa = data.mapa;
+      if (!mapa || typeof mapa !== "object") return;
+      const frases = ora.frases || [];
+      const candidatos = {};
+      this.oraJugadoresActivos().forEach(x => candidatos[x.id] = true);
+      candidatos["ORA"] = true;
+      const limpio = {};
+      for (let i = 0; i < frases.length; i++) {
+        const g = mapa[frases[i].id];
+        if (g == null || !candidatos[String(g)]) return;          /* incompleto o inválido: no cuenta */
+        limpio[frases[i].id] = String(g);
+      }
+      this.oraGuess[deId] = limpio;
+      if (ora.votaron.indexOf(deId) < 0) ora.votaron.push(deId);
+      if (deId === LOCAL.miId) AUDIO.pop();
+      NET.broadcastState(); UI.render();
+      this.oraChequearCompleto();
+    }
+  },
+  /* si ya mandaron todos los activos, se avanza la etapa sin esperar el reloj */
+  oraChequearCompleto() {
+    const ora = this.state.ora;
+    if (!ora) return;
+    const activos = this.oraJugadoresActivos();
+    if (ora.etapa === "votar") {
+      if (activos.length && activos.every(x => this.oraVotos[x.id])) this.oraArmarAdivinar();
+    } else if (ora.etapa === "adivinar") {
+      if (activos.length && activos.every(x => this.oraGuess[x.id])) this.oraCalcularResultados();
+    }
+  },
+  /* mezcla las justificaciones reales con 1-2 frases falsas del Oráculo y las publica (sin autores) */
+  oraArmarAdivinar() {
+    const ora = this.state.ora;
+    if (!ora || ora.etapa !== "votar") return;
+    const activos = this.oraJugadoresActivos();
+    const entradas = [];
+    activos.forEach(x => { if (this.oraVotos[x.id]) entradas.push({ autor: x.id, texto: this.oraVotos[x.id].texto, voto: this.oraVotos[x.id].voto }); });
+    if (!entradas.length) { this.oraFinResultados(); return; }    /* nadie escribió: se saltea la ronda */
+    const conteo = {};
+    entradas.forEach(e => { conteo[e.voto] = (conteo[e.voto] || 0) + 1; });
+    let maxV = 0;
+    Object.keys(conteo).forEach(id => { if (conteo[id] > maxV) maxV = conteo[id]; });
+    this.oraMasVotado = Object.keys(conteo).filter(id => conteo[id] === maxV && maxV > 0);   /* se revela en resultados */
+    const nombreDe = id => { const j = this.state.jugadores.find(x => x.id === id); return j ? j.nombre : ""; };
+    const nombresVotados = Object.keys(conteo).map(nombreDe).filter(n => n);
+    const nombresMasVotados = this.oraMasVotado.map(nombreDe).filter(n => n);
+    const frases = [];
+    this.oraAutores = {};
+    entradas.forEach((e, i) => { const fid = "f" + i; frases.push({ id: fid, txt: e.texto }); this.oraAutores[fid] = e.autor; });
+    const K = ORA.cantFalsas(activos.length);
+    for (let k = 0; k < K; k++) {
+      const fi = ROTACION_ORA.elegir(ORA_FALSAS, this.oraFalsasPartida, "f");
+      this.oraFalsasPartida.add("f:" + fi);
+      const fid = "ora" + k;
+      frases.push({ id: fid, txt: ORA.fraseFalsa(ORA_FALSAS[fi], nombresMasVotados, nombresVotados) });
+      this.oraAutores[fid] = "ORA";
+    }
+    ORA.mezclar(frases);
+    this.oraGuess = {};
+    ora.etapa = "adivinar";
+    ora.votaron = [];
+    ora.frases = frases;
+    const seg = CFG.ORA_SEG_ADIVINAR_BASE + frases.length * CFG.ORA_SEG_ADIVINAR_FRASE;
+    AUDIO.tick();
+    this.oraArmarTimer(seg, () => this.oraCalcularResultados());
+  },
+  /* puntaje: +2 por autor real adivinado, +3 por falsa del Oráculo detectada,
+     +1 al autor por cada jugador que erró SU frase, +2 bonus del más votado (todos los empatados) */
+  oraCalcularResultados() {
+    const ora = this.state.ora;
+    if (!ora || ora.etapa !== "adivinar") return;
+    const activos = this.oraJugadoresActivos();
+    const frases = ora.frases || [];
+    const puntos = {}; const engano = {};
+    activos.forEach(x => { puntos[x.id] = 0; engano[x.id] = 0; });
+    const detalle = {};
+    frases.forEach(f => {
+      const real = this.oraAutores[f.id];
+      let aciertos = 0;
+      activos.forEach(x => {
+        if (real === x.id) return;                                /* cada uno conoce su propia frase: no puntúa */
+        const g = this.oraGuess[x.id] ? this.oraGuess[x.id][f.id] : null;
+        if (g == null) return;
+        if (g === real) {
+          aciertos++;
+          puntos[x.id] += (real === "ORA" ? CFG.ORA_PTS_ORACULO : CFG.ORA_PTS_REAL);
+        } else if (real !== "ORA") {
+          engano[real] = (engano[real] || 0) + CFG.ORA_PTS_ENGANO;
+        }
+      });
+      detalle[f.id] = { autor: real, aciertos: aciertos };
+    });
+    activos.forEach(x => { puntos[x.id] += engano[x.id] || 0; });
+    (this.oraMasVotado || []).forEach(id => {
+      if (puntos[id] != null) { puntos[id] += CFG.ORA_PTS_ELEGIDO; this.statDe(id).oraVecesElegido++; }
+    });
+    activos.forEach(x => {
+      const s = this.statDe(x.id);
+      s.puntos = (s.puntos || 0) + puntos[x.id];
+      /* desglose para los premios del podio */
+      let ad = 0;
+      frases.forEach(f => {
+        const real = this.oraAutores[f.id];
+        if (real === x.id) return;
+        const g = this.oraGuess[x.id] ? this.oraGuess[x.id][f.id] : null;
+        if (g != null && g === real) ad += (real === "ORA" ? CFG.ORA_PTS_ORACULO : CFG.ORA_PTS_REAL);
+      });
+      s.oraAdivino = (s.oraAdivino || 0) + ad;
+      s.oraEngano = (s.oraEngano || 0) + (engano[x.id] || 0);
+    });
+    ora.etapa = "resultados";
+    ora.autores = this.oraAutores;
+    ora.detalle = detalle;
+    ora.puntosRonda = puntos;
+    ora.masVotado = this.oraMasVotado || [];
+    ora.votaron = [];
+    AUDIO.bono(); UI.vibrar([40, 60, 40]);
+    this.oraArmarTimer(CFG.ORA_SEG_RESULTADOS, () => this.oraFinResultados());
+  },
+  oraFinResultados() {
+    if (!this.state.ora) return;
+    if (this.chequearFin()) return;
+    if (this.state.ronda >= CFG.ORA_RONDAS) { this.oraTerminar(); return; }
+    this.state.ronda++;
+    this.oraEmpezarRonda();
+  },
+  oraTerminar() {
+    this.limpiarTimer();
+    this.enPausa = false;
+    this.state.fase = "podio";
+    this.state.bombaEn = null; this.state.turnoSeg = null; this.state.ora = null;
+    NET.broadcastState(); UI.irPodio();
+  },
+
   armarTimer() {
     this.limpiarTimer();
     let min = CFG.BOMBA_MIN_MS, max = CFG.BOMBA_MAX_MS;
@@ -1402,6 +2945,9 @@ const GAME = {
     if (this.revesInt) { clearInterval(this.revesInt); this.revesInt = null; }
     if (this.bombaTimer) { clearTimeout(this.bombaTimer); this.bombaTimer = null; }
     if (this.ahoInt) { clearInterval(this.ahoInt); this.ahoInt = null; }
+    if (this.rfInt) { clearInterval(this.rfInt); this.rfInt = null; }
+    if (this.trvInt) { clearInterval(this.trvInt); this.trvInt = null; }
+    if (this.oraInt) { clearInterval(this.oraInt); this.oraInt = null; }
     if (this.ahoCompTimeout) { clearTimeout(this.ahoCompTimeout); this.ahoCompTimeout = null; }
     this.pararTick();
   },
@@ -1517,6 +3063,8 @@ const GAME = {
     this.state.bombaEn = null;
     this.state.palabraActual = "";
     this.state.ahoOpciones = null;
+    this.state.rf = null; this.rfSol = null;
+    this.state.trv = null; this.trvSol = null;
     NET.broadcastEvent("explosion", { perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
     UI.mostrarExplosion({ perdedorId, nombre: j.nombre, emoji: j.emoji, danio });
     NET.broadcastState(); UI.render();
@@ -1539,7 +3087,7 @@ const GAME = {
     if (this.vivos().length <= 1) {
       this.limpiarTimer();
       this.enPausa = false;
-      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null; this.state.anuncioSeg = null; this.state.revesPalabra = null; this.state.revesSeg = null; this.state.ahoOpciones = null; this.state.ahoCompleta = null; this.state.ahoCat = null;
+      this.state.fase = "podio"; this.state.bombaEn = null; this.state.turnoSeg = null; this.state.anuncioSeg = null; this.state.revesPalabra = null; this.state.revesSeg = null; this.state.ahoOpciones = null; this.state.ahoCompleta = null; this.state.ahoCat = null; this.state.rf = null; this.rfSol = null; this.state.trv = null; this.trvSol = null; this.state.ora = null;
       NET.broadcastState(); UI.irPodio();
       return true;
     }
@@ -1567,6 +3115,10 @@ const GAME = {
     st.turnoSeg = null; st.mechaFrac = null; st.anuncioSeg = null;
     st.revesPalabra = null; st.revesSeg = null;
     st.ahoMask = null; st.ahoOpciones = null; st.ahoCompleta = null; st.ahoCat = null;
+    st.rf = null; this.rfSol = null; this.rfUsados = [];
+    st.trv = null; this.trvSol = null; this.trvPartida = new Set();
+    st.ora = null; this.oraVotos = {}; this.oraGuess = {}; this.oraAutores = {};
+    this.oraPartida = new Set(); this.oraFalsasPartida = new Set();
     this.ahoPartida = new Set(); this.ahoPalabra = null; this.ahoReveladas = new Set();
     NET.broadcastState(); UI.irLobby();
   }
@@ -1630,7 +3182,7 @@ const UI = {
     CFG.EMOJIS.forEach(e => {
       const el = document.createElement("div");
       el.className = "emoji-op" + (e === LOCAL.emoji ? " sel" : "");
-      el.innerHTML = `<span class="av-real">${e}</span>`;
+      el.innerHTML = AV(e);
       el.onclick = () => { LOCAL.emoji = e; this.initEmojis(); };
       cont.appendChild(el);
     });
@@ -1638,6 +3190,11 @@ const UI = {
 
   setModo(m) {
     if (!LOCAL.soyHost || GAME.state.fase !== "lobby") return;
+    if (m === "oraculo" && GAME.state.jugadores.filter(j => j.conectado).length < CFG.ORA_MIN_JUG) {
+      this.banner("🔮 EL ORÁCULO MIENTE necesita al menos " + CFG.ORA_MIN_JUG + " jugadores conectados.", null, true);
+      setTimeout(() => this.ocultarBanner(), 2600);
+      return;
+    }
     GAME.state.modo = m;
     NET.broadcastState(); this.render();
   },
@@ -1650,6 +3207,479 @@ const UI = {
     const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
     if (LOCAL.soyHost) GAME.intentarLetra(LOCAL.miId, l, nonce);
     else NET.enviarInput({ kind: "letra", letra: l, nonce });
+  },
+
+  /* trivia: tocar una opción — deshabilita todo y manda la respuesta al host con nonce */
+  trvElegir(i) {
+    const cont = document.getElementById("trv-opciones");
+    if (cont) { cont.querySelectorAll("button").forEach(b => b.disabled = true); cont.style.pointerEvents = "none"; setTimeout(() => { cont.style.pointerEvents = ""; }, 900); }
+    this.vibrar(10);
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    if (LOCAL.soyHost) GAME.intentarTrivia(LOCAL.miId, String(i), nonce);
+    else NET.enviarInput({ kind: "trv", a: String(i), nonce });
+  },
+
+  /* reflejos: mandar la respuesta del microjuego al host */
+  elegirRf(a) {
+    this.vibrar(10);
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    if (LOCAL.soyHost) GAME.intentarReflejo(LOCAL.miId, a, nonce);
+    else NET.enviarInput({ kind: "rf", a, nonce });
+  },
+  _rfKey: null, _rfTimers: [], _rfRaf: null,
+  _rfLimpiarTimers() { this._rfTimers.forEach(t => clearTimeout(t)); this._rfTimers = []; if (this._rfRaf) { cancelAnimationFrame(this._rfRaf); this._rfRaf = null; } },
+  /* arma la interfaz del microjuego actual dentro del panel del turno (solo para quien tiene la bomba) */
+  armarMicrojuego(cont, rf) {
+    this._rfLimpiarTimers();
+    cont.innerHTML = "";
+    cont.style.pointerEvents = "";
+    if (!rf) return;
+    const responder = (a) => {
+      cont.querySelectorAll("button").forEach(b => b.disabled = true);
+      cont.style.pointerEvents = "none";
+      this.elegirRf(a);
+    };
+    if (rf.tipo === "color") {
+      const g = document.createElement("div"); g.className = "rf-grid" + (rf.colores.length > 4 ? " rf-grid3" : "");
+      rf.colores.forEach((c, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-color"; b.style.background = c;
+        b.addEventListener("pointerdown", e => { e.preventDefault(); responder(String(i)); });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "impostor" || rf.tipo === "emojinombre" || rf.tipo === "gigante" || rf.tipo === "dobleimpostor") {
+      const g = document.createElement("div"); g.className = "rf-grid rf-grid3";
+      const sel = [];
+      rf.tiles.forEach((t, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-tile"; b.textContent = t;
+        if (rf.tipo === "gigante" && i === rf.grande) b.style.fontSize = (1.6 * (1 + rf.dif / 100)).toFixed(2) + "rem";
+        b.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          if (rf.tipo === "dobleimpostor") {
+            if (b.disabled || sel.indexOf(i) >= 0) return;
+            sel.push(i); b.classList.add("sel");
+            if (sel.length >= 2) responder(sel.sort((x, y) => x - y).join("-"));
+            return;
+          }
+          responder(String(i));
+        });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "mate" || rf.tipo === "contar" || rf.tipo === "mayor" || rf.tipo === "paridad" || rf.tipo === "vocal" || rf.tipo === "serie" || rf.tipo === "compara" || rf.tipo === "falso" || rf.tipo === "inicial") {
+      if (rf.tipo === "contar") { const f = document.createElement("div"); f.className = "rf-campo"; f.textContent = rf.campo; cont.appendChild(f); }
+      if (rf.tipo === "inicial") { const f = document.createElement("div"); f.className = "rf-grande"; f.textContent = rf.grande; cont.appendChild(f); }
+      const g = document.createElement("div"); g.className = "rf-grid";
+      rf.ops.forEach((o, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-op"; b.textContent = o;
+        b.addEventListener("pointerdown", e => { e.preventDefault(); responder(String(i)); });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "stroop") {
+      const w = document.createElement("div"); w.className = "rf-palabra"; w.textContent = rf.palabra; w.style.color = rf.tinta;
+      cont.appendChild(w);
+      const g = document.createElement("div"); g.className = "rf-grid" + (rf.colores.length > 4 ? " rf-grid3" : "");
+      rf.colores.forEach((c, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-color"; b.style.background = c;
+        b.addEventListener("pointerdown", e => { e.preventDefault(); responder(String(i)); });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "orden") {
+      const g = document.createElement("div"); g.className = "rf-grid" + (rf.nums.length > 4 ? " rf-grid3" : "");
+      const tocados = [];
+      rf.nums.forEach((n) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-op"; b.textContent = n;
+        b.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          if (b.disabled) return;
+          b.disabled = true; b.classList.add("sel"); this.vibrar(8);
+          tocados.push(n);
+          if (tocados.length >= rf.nums.length) responder(tocados.join(","));
+        });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "balanza") {
+      const g = document.createElement("div"); g.className = "rf-grid";
+      [["a", rf.campoA], ["b", rf.campoB]].forEach(par => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-lado"; b.textContent = par[1];
+        b.addEventListener("pointerdown", e => { e.preventDefault(); responder(par[0]); });
+        g.appendChild(b);
+      });
+      cont.appendChild(g);
+    } else if (rf.tipo === "semaforo") {
+      const z = document.createElement("div"); z.className = "rf-sem";
+      z.innerHTML = '<div class="rf-flecha">\u{1F6A6}</div><div class="rf-swipe-txt">esper\u00e1 el verde\u2026</div>';
+      let verde = false, mandado = false;
+      this._rfTimers.push(setTimeout(() => {
+        verde = true; z.classList.add("verde");
+        z.innerHTML = '<div class="rf-flecha">\u2705</div><div class="rf-swipe-txt">\u00a1TOC\u00c1 YA!</div>';
+      }, rf.rojoMs));
+      z.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        if (mandado) return; mandado = true;
+        responder(verde ? "ok" : "tap");
+      });
+      cont.appendChild(z);
+    } else if (rf.tipo === "frenar") {
+      const z = document.createElement("div"); z.className = "rf-frenar";
+      z.innerHTML = '<div class="rf-pista"><div class="rf-zona-ok" style="left:' + rf.zi + '%;width:' + (rf.zf - rf.zi) + '%"></div><div class="rf-aguja"></div></div><div class="rf-swipe-txt">toc\u00e1 para frenar la aguja en el verde</div>';
+      const aguja = z.querySelector(".rf-aguja");
+      const t0 = performance.now();
+      let parado = false;
+      const pos = () => { const f = ((performance.now() - t0) % (rf.vel * 2)) / rf.vel; return Math.round((f <= 1 ? f : 2 - f) * 100); };
+      const paso = () => { if (parado) return; aguja.style.left = pos() + "%"; this._rfRaf = requestAnimationFrame(paso); };
+      paso();
+      z.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        if (parado) return; parado = true;
+        const p = pos(); aguja.style.left = p + "%";
+        if (this._rfRaf) cancelAnimationFrame(this._rfRaf);
+        responder(String(p));
+      });
+      cont.appendChild(z);
+    } else if (rf.tipo === "reves" || rf.tipo === "anagrama" || rf.tipo === "copiar") {
+      const w = document.createElement("div"); w.className = "rf-palabra"; w.textContent = rf.palabra;
+      cont.appendChild(w);
+    } else if (rf.tipo === "mantener") {
+      const b = document.createElement("button"); b.type = "button"; b.className = "rf-hold"; b.textContent = "MANTEN\u00c9 APRETADO";
+      let t0 = 0, mandado = false;
+      const soltar = () => {
+        if (!t0 || mandado) return;
+        mandado = true; b.classList.remove("apretado");
+        responder(String(Math.round(performance.now() - t0)));
+      };
+      b.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        try { b.setPointerCapture(e.pointerId); } catch (err) {}
+        t0 = performance.now(); b.classList.add("apretado"); this.vibrar(15);
+      });
+      b.addEventListener("pointerup", e => { e.preventDefault(); soltar(); });
+      b.addEventListener("pointercancel", soltar);
+      cont.appendChild(b);
+    } else if (rf.tipo === "deslizar") {
+      const FLECHA = { izq: "\u2B05\uFE0F", der: "\u27A1\uFE0F", arriba: "\u2B06\uFE0F", abajo: "\u2B07\uFE0F" };
+      const z = document.createElement("div"); z.className = "rf-swipe";
+      z.innerHTML = '<div class="rf-flecha">' + FLECHA[rf.dir] + '</div><div class="rf-swipe-txt">' + (rf.invertida ? "\u00a1AL REV\u00c9S de la flecha!" : "desliz\u00e1 el dedo ac\u00e1") + "</div>";
+      let sx = 0, sy = 0, activo = false;
+      z.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        try { z.setPointerCapture(e.pointerId); } catch (err) {}
+        sx = e.clientX; sy = e.clientY; activo = true;
+      });
+      z.addEventListener("pointerup", e => {
+        if (!activo) return;
+        const dx = e.clientX - sx, dy = e.clientY - sy;
+        if (Math.abs(dx) < 24 && Math.abs(dy) < 24) { activo = false; return; }   /* muy corto: no cuenta, puede reintentar */
+        activo = false;
+        responder(Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? "der" : "izq") : (dy > 0 ? "abajo" : "arriba"));
+      });
+      cont.appendChild(z);
+    } else if (rf.tipo === "memoria") {
+      const COLS = ["#e53935", "#1e88e5", "#43a047", "#fdd835"];
+      const est = document.createElement("div"); est.className = "rf-swipe-txt"; est.textContent = "Mir\u00e1 la secuencia\u2026";
+      const g = document.createElement("div"); g.className = "rf-grid";
+      const pads = COLS.map((c, i) => {
+        const b = document.createElement("button"); b.type = "button"; b.className = "rf-pad"; b.style.background = c; b.disabled = true;
+        b.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          if (b.disabled) return;
+          b.classList.add("on"); setTimeout(() => b.classList.remove("on"), 180);
+          AUDIO.tono(300 + i * 130, 0.14, "sine", 0.2);
+          mio.push(i);
+          if (mio.length >= seq.length) responder(mio.join(""));
+        });
+        g.appendChild(b); return b;
+      });
+      cont.appendChild(est); cont.appendChild(g);
+      const seq = rf.seq.split("").map(Number);
+      const mio = [];
+      seq.forEach((sI, i) => {
+        this._rfTimers.push(setTimeout(() => { pads[sI].classList.add("on"); AUDIO.tono(300 + sI * 130, 0.18, "sine", 0.2); }, 500 + i * 550));
+        this._rfTimers.push(setTimeout(() => pads[sI].classList.remove("on"), 500 + i * 550 + 380));
+      });
+      this._rfTimers.push(setTimeout(() => {
+        est.textContent = "\u00a1Ahora repetila!";
+        pads.forEach(b => b.disabled = false);
+      }, 500 + seq.length * 550 + 200));
+    } else if (rf.tipo === "rapido") {
+      let falta = rf.n;
+      const b = document.createElement("button"); b.type = "button"; b.className = "rf-hold rf-contador"; b.textContent = falta;
+      b.addEventListener("pointerdown", e => {
+        e.preventDefault();
+        if (b.disabled) return;
+        falta--; this.vibrar(8);
+        if (falta <= 0) { b.textContent = "\u2705"; responder("ok"); }
+        else b.textContent = falta;
+      });
+      cont.appendChild(b);
+    } else if (rf.tipo === "quieto") {
+      const z = document.createElement("div"); z.className = "rf-quieto";
+      z.innerHTML = '<div class="rf-flecha">\u{1F9CA}</div><div class="rf-swipe-txt">quedate quieto\u2026</div><div class="rf-barra"><div class="rf-barra-in" style="animation-duration:' + rf.espera + 's"></div></div>';
+      let listo = false;
+      z.addEventListener("pointerdown", e => { e.preventDefault(); if (listo) return; listo = true; responder("tap"); });
+      this._rfTimers.push(setTimeout(() => { if (!listo) { listo = true; responder("ok"); } }, rf.espera * 1000 + 80));
+      cont.appendChild(z);
+    }
+  },
+
+
+  /* ===== MODO EL ORÁCULO MIENTE (UI): votar / adivinar / resultados =====
+     Memo por clave: la zona solo se re-arma si cambia etapa/ronda o si yo ya mandé lo mío.
+     El progreso "n/N" se actualiza liviano en cada render (sin re-armar, para no borrar lo que escribo). */
+  _oraKey: null, oraSelVoto: null, oraSelAutor: null, oraMapa: {}, oraMiTexto: "", oraDraft: "",
+  renderOra(forzar) {
+    const st = GAME.state;
+    const zona = document.getElementById("ora-zona");
+    if (!zona) return;
+    const ora = st.ora;
+    if (st.modo !== "oraculo" || st.fase !== "jugando" || !ora) { zona.style.display = "none"; this._oraKey = null; return; }
+    zona.style.display = "flex";
+    const yaMande = ora.votaron && ora.votaron.indexOf(LOCAL.miId) >= 0;
+    const key = ora.etapa + "|" + st.ronda + "|" + (yaMande ? "yo1" : "yo0") + "|" + (ora.frases ? ora.frases.length : 0) + "|" + (ora.puntosRonda ? "r" : "");
+    if (!forzar && this._oraKey === key) { this.oraActualizarProgreso(); return; }
+    if (this._oraKey !== key) {
+      const etapaAntes = this._oraKey ? this._oraKey.split("|")[0] : null;
+      this.oraSelAutor = null;
+      if (etapaAntes !== ora.etapa) this.oraMapa = {};   /* etapa nueva: asignaciones limpias */
+    }
+    this._oraKey = key;
+    zona.innerHTML = "";
+    const activos = st.jugadores.filter(j => j.conectado && j.vidas > 0);
+    const N = activos.length;
+
+    const preg = document.createElement("div");
+    preg.className = "ora-preg";
+    preg.textContent = ora.pregunta;
+    zona.appendChild(preg);
+
+    if (ora.etapa === "votar") {
+      if (yaMande) {
+        this.restaurarTeclado();
+        const esp = document.createElement("div"); esp.className = "ora-espera";
+        esp.innerHTML = "\u2705 Voto y excusa enviados.<br>Esperando al resto\u2026";
+        zona.appendChild(esp);
+      } else {
+        const sub = document.createElement("div"); sub.className = "ora-sub";
+        sub.textContent = "Vot\u00e1 a qui\u00e9n le cae la pregunta y escrib\u00ed una excusa an\u00f3nima (m\u00e1x " + CFG.ORA_MAX_CHARS + " letras). Despu\u00e9s nadie sabr\u00e1 qui\u00e9n escribi\u00f3 qu\u00e9.";
+        zona.appendChild(sub);
+        const chips = document.createElement("div"); chips.className = "ora-chips";
+        activos.forEach(j => {
+          const c = document.createElement("button");
+          c.type = "button";
+          c.className = "ora-chip" + (this.oraSelVoto === j.id ? " sel" : "");
+          c.innerHTML = AV(j.emoji) + " " + this.escape(j.nombre) + (j.id === LOCAL.miId ? " (vos)" : "");
+          c.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            this.oraSelVoto = j.id; this.vibrar(8);
+            chips.querySelectorAll(".ora-chip").forEach(x => x.classList.remove("sel"));
+            c.classList.add("sel");
+            this.oraActualizarBoton();
+          });
+          chips.appendChild(c);
+        });
+        zona.appendChild(chips);
+        const inp = document.createElement("input");
+        inp.type = "text"; inp.id = "ora-texto"; inp.maxLength = CFG.ORA_MAX_CHARS;
+        inp.placeholder = "tu excusa an\u00f3nima\u2026";
+        inp.autocomplete = "off"; inp.setAttribute("autocapitalize", "off"); inp.setAttribute("autocorrect", "off"); inp.setAttribute("spellcheck", "false"); inp.setAttribute("inputmode", "none");
+        inp.value = this.oraDraft || "";
+        inp.addEventListener("input", () => { this.oraDraft = inp.value.slice(0, CFG.ORA_MAX_CHARS); this.oraActualizarBoton(); });
+        inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); this.oraVotar(); } });
+        zona.appendChild(inp);
+        const kbSlot = document.createElement("div"); kbSlot.id = "ora-kb";
+        zona.appendChild(kbSlot);
+        const tec = document.getElementById("teclado-propio");
+        if (tec) { kbSlot.appendChild(tec); tec.style.display = ""; }
+        const btn = document.createElement("button");
+        btn.className = "btn btn-primary"; btn.id = "ora-btn-votar";
+        btn.textContent = "MANDAR VOTO + EXCUSA \u{1F52E}";
+        btn.addEventListener("pointerdown", (e) => { e.preventDefault(); this.oraVotar(); });
+        zona.appendChild(btn);
+        this.oraActualizarBoton();
+      }
+      const prog = document.createElement("div"); prog.className = "ora-sub"; prog.id = "ora-progreso";
+      zona.appendChild(prog);
+      this.oraActualizarProgreso();
+
+    } else if (ora.etapa === "adivinar") {
+      this.restaurarTeclado();
+      if (yaMande) {
+        const esp = document.createElement("div"); esp.className = "ora-espera";
+        esp.innerHTML = "\u2705 Respuestas enviadas.<br>Esperando al resto\u2026";
+        zona.appendChild(esp);
+      } else {
+        const sub = document.createElement("div"); sub.className = "ora-sub";
+        sub.textContent = "\u00bfQui\u00e9n escribi\u00f3 cada frase? Eleg\u00ed un autor abajo y despu\u00e9s toc\u00e1 las frases que creas que son suyas. Hay " + ORA.cantFalsas(N) + " inventada(s) por el Or\u00e1culo.";
+        zona.appendChild(sub);
+        const chips = document.createElement("div"); chips.className = "ora-chips";
+        const candidatos = activos.map(j => ({ id: j.id, html: AV(j.emoji) + " " + this.escape(j.nombre) }));
+        candidatos.push({ id: "ORA", html: "\u{1F52E} El Or\u00e1culo" });
+        candidatos.forEach(cand => {
+          const c = document.createElement("button");
+          c.type = "button";
+          c.className = "ora-chip" + (this.oraSelAutor === cand.id ? " sel" : "");
+          c.innerHTML = cand.html + (cand.id === LOCAL.miId ? " (vos)" : "");
+          c.addEventListener("pointerdown", (e) => {
+            e.preventDefault();
+            this.oraSelAutor = cand.id; this.vibrar(8);
+            chips.querySelectorAll(".ora-chip").forEach(x => x.classList.remove("sel"));
+            c.classList.add("sel");
+            this.oraActualizarBoton();
+          });
+          chips.appendChild(c);
+        });
+        zona.appendChild(chips);
+        const lista = document.createElement("div"); lista.className = "ora-frases";
+        (ora.frases || []).forEach(f => {
+          const b = document.createElement("button");
+          b.type = "button";
+          const esMia = this.oraAutorDe(f.id) === LOCAL.miId;
+          b.className = "ora-frase" + (this.oraMapa[f.id] ? " asignada" : "") + (esMia ? " mio" : "");
+          b.style.textAlign = "left";
+          const asign = this.oraMapa[f.id];
+          const nombreAutor = asign ? this.oraNombreCandidato(asign, activos) : null;
+          b.innerHTML = "\u00AB" + this.escape(f.txt) + "\u00BB" +
+            (esMia ? '<span class="ora-autor-tag">\u270d\uFE0F Tu frase (no punt\u00faa)</span>'
+                   : (nombreAutor ? '<span class="ora-autor-tag">\u27a1\uFE0F ' + nombreAutor + '</span>' : ""));
+          if (!esMia) {
+            b.addEventListener("pointerdown", (e) => { e.preventDefault(); this.oraTapFrase(f.id); });
+          }
+          lista.appendChild(b);
+        });
+        zona.appendChild(lista);
+        const total = (ora.frases || []).length;
+        const btn = document.createElement("button");
+        btn.className = "btn btn-ok"; btn.id = "ora-btn-adivinar";
+        btn.textContent = "MANDAR RESPUESTAS";
+        btn.addEventListener("pointerdown", (e) => { e.preventDefault(); this.oraEnviarAdivinar(); });
+        zona.appendChild(btn);
+        this.oraActualizarBoton();
+      }
+      const prog = document.createElement("div"); prog.className = "ora-sub"; prog.id = "ora-progreso";
+      zona.appendChild(prog);
+      this.oraActualizarProgreso();
+
+    } else if (ora.etapa === "resultados") {
+      this.restaurarTeclado();
+      /* el más votado de la ronda (bonus) */
+      if (ora.masVotado && ora.masVotado.length) {
+        const mv = document.createElement("div"); mv.className = "ora-sub";
+        const nombres = ora.masVotado.map(id => { const j = st.jugadores.find(x => x.id === id); return j ? this.escape(j.nombre) : "?"; });
+        const listaN = nombres.length > 1 ? (nombres.slice(0, -1).join(", ") + " y " + nombres[nombres.length - 1]) : (nombres[0] || "?");
+        mv.innerHTML = "\u2B50 El grupo eligi\u00f3 a <b>" + listaN + "</b> (+" + CFG.ORA_PTS_ELEGIDO + " pts de bonus)";
+        zona.appendChild(mv);
+      }
+      /* frases reveladas con su autor real */
+      const lista = document.createElement("div"); lista.className = "ora-frases";
+      (ora.frases || []).forEach(f => {
+        const d = (ora.detalle && ora.detalle[f.id]) || { autor: "ORA", aciertos: 0 };
+        const b = document.createElement("div");
+        const eraOra = d.autor === "ORA";
+        b.className = "ora-frase revelada " + (eraOra ? "era-oraculo" : "era-real");
+        let autorTxt;
+        if (eraOra) autorTxt = "\u{1F52E} ERA DEL OR\u00c1CULO (frase falsa)";
+        else { const j = st.jugadores.find(x => x.id === d.autor); autorTxt = "\u270d\uFE0F La escribi\u00f3 " + (j ? this.escape(j.nombre) : "?"); }
+        b.innerHTML = "\u00AB" + this.escape(f.txt) + "\u00BB" +
+          '<span class="ora-autor-tag">' + autorTxt + " \u00b7 aciertos: " + d.aciertos + "</span>";
+        lista.appendChild(b);
+      });
+      zona.appendChild(lista);
+      /* puntos de la ronda, de mayor a menor */
+      const sub = document.createElement("div"); sub.className = "ora-sub";
+      sub.textContent = "Puntos de la ronda:";
+      zona.appendChild(sub);
+      const filas = Object.keys(ora.puntosRonda || {}).map(id => ({ id, pts: ora.puntosRonda[id] }));
+      filas.sort((a, b) => b.pts - a.pts);
+      filas.forEach(fi => {
+        const j = st.jugadores.find(x => x.id === fi.id);
+        if (!j) return;
+        const d = document.createElement("div"); d.className = "ora-res-fila";
+        d.innerHTML = AV(j.emoji) + " <b>" + this.escape(j.nombre) + "</b>" + (fi.id === LOCAL.miId ? " (vos)" : "") + '<span class="puntos">+' + fi.pts + "</span>";
+        zona.appendChild(d);
+      });
+    }
+  },
+  /* progreso "ya mandaron n/N" sin re-armar la zona (así no se borra lo que estoy escribiendo) */
+  oraActualizarProgreso() {
+    const prog = document.getElementById("ora-progreso");
+    const st = GAME.state;
+    if (!prog || !st.ora) return;
+    const N = st.jugadores.filter(j => j.conectado && j.vidas > 0).length;
+    const n = st.ora.votaron ? st.ora.votaron.length : 0;
+    prog.textContent = st.ora.etapa === "votar" ? ("Ya votaron " + n + " de " + N) : (st.ora.etapa === "adivinar" ? ("Ya respondieron " + n + " de " + N) : "");
+  },
+  /* habilita/deshabilita el botón principal según el estado del formulario */
+  oraActualizarBoton() {
+    const st = GAME.state;
+    if (!st.ora) return;
+    if (st.ora.etapa === "votar") {
+      const btn = document.getElementById("ora-btn-votar");
+      const inp = document.getElementById("ora-texto");
+      if (btn) btn.disabled = !(this.oraSelVoto && inp && inp.value.trim().length >= 3);
+    } else if (st.ora.etapa === "adivinar") {
+      const btn = document.getElementById("ora-btn-adivinar");
+      if (!btn) return;
+      const frases = (st.ora.frases || []).filter(f => this.oraAutorDe(f.id) !== LOCAL.miId);
+      const asignadas = frases.filter(f => this.oraMapa[f.id]).length;
+      btn.disabled = asignadas < frases.length;
+      btn.textContent = "MANDAR RESPUESTAS (" + asignadas + "/" + frases.length + ")";
+    }
+  },
+  /* autor REAL de una frase según lo público: solo se sabe la propia (por el texto que mandé) */
+  oraAutorDe(fid) {
+    const st = GAME.state;
+    if (LOCAL.soyHost && GAME.oraAutores && GAME.oraAutores[fid]) return GAME.oraAutores[fid];
+    const f = (st.ora && st.ora.frases || []).find(x => x.id === fid);
+    if (f && this.oraMiTexto && f.txt === this.oraMiTexto) return LOCAL.miId;
+    return null;
+  },
+  oraNombreCandidato(id, activos) {
+    if (id === "ORA") return "\u{1F52E} El Or\u00e1culo";
+    const j = (activos || GAME.state.jugadores).find(x => x.id === id);
+    return j ? this.escape(j.nombre) : "?";
+  },
+  /* tocar una frase: la asigna al autor elegido (o la desasigna si ya era de ese) */
+  oraTapFrase(fid) {
+    if (!this.oraSelAutor) { this.vibrar([30, 30, 30]); return; }
+    if (this.oraMapa[fid] === this.oraSelAutor) delete this.oraMapa[fid];
+    else this.oraMapa[fid] = this.oraSelAutor;
+    this.vibrar(8);
+    this.renderOra(true);
+  },
+  /* enviar voto + excusa (con nonce); el texto queda guardado para marcar mi frase despu\u00e9s */
+  oraVotar() {
+    const inp = document.getElementById("ora-texto");
+    const texto = inp ? inp.value.trim().slice(0, CFG.ORA_MAX_CHARS) : "";
+    if (!this.oraSelVoto || texto.length < 3) return;
+    const btn = document.getElementById("ora-btn-votar");
+    if (btn) btn.disabled = true;
+    this.oraMiTexto = texto;
+    this.oraDraft = "";
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    const data = { kind: "ora", sub: "votar", voto: this.oraSelVoto, texto: texto, nonce: nonce };
+    this.vibrar(10);
+    if (LOCAL.soyHost) GAME.recibirOra(LOCAL.miId, data);
+    else NET.enviarInput(data);
+  },
+  /* enviar el mapa frase -> autor (con nonce) */
+  oraEnviarAdivinar() {
+    const st = GAME.state;
+    const frases = (st.ora && st.ora.frases) || [];
+    const mapa = {};
+    frases.forEach(f => {
+      mapa[f.id] = (this.oraAutorDe(f.id) === LOCAL.miId) ? LOCAL.miId : (this.oraMapa[f.id] || null);
+    });
+    if (frases.some(f => mapa[f.id] == null)) return;
+    const btn = document.getElementById("ora-btn-adivinar");
+    if (btn) btn.disabled = true;
+    const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
+    const data = { kind: "ora", sub: "adivinar", mapa: mapa, nonce: nonce };
+    this.vibrar(10);
+    if (LOCAL.soyHost) GAME.recibirOra(LOCAL.miId, data);
+    else NET.enviarInput(data);
   },
 
   leerNombre() { return document.getElementById("in-nombre").value.trim().slice(0, 14); },
@@ -1716,18 +3746,25 @@ const UI = {
 
     const ul = document.getElementById("lista-jugadores");
     if (ul) {
+      /* v26: memo — solo re-armar la lista si cambió algo visible (antes se destruía y
+         recreaba el DOM completo del lobby en cada render, también durante la partida) */
+      const lobbyKey = (st.jugadores || []).map(j => j.id + ":" + j.nombre + ":" + j.emoji + ":" + (j.conectado ? 1 : 0)).join("|")
+        + "#" + st.modo + "#" + st.fase + "#" + (LOCAL.soyHost ? "H" : "G") + "#" + LOCAL.miId;
+      if (this._lobbyKey !== lobbyKey) {
+      this._lobbyKey = lobbyKey;
       ul.innerHTML = "";
       (st.jugadores || []).forEach((j, i) => {
         const li = document.createElement("li");
         li.className = "jug";
         const soyYo = j.id === LOCAL.miId;
         li.innerHTML = `
-          <span class="av av-real">${j.emoji}</span>
+          <span class="av">${AV(j.emoji)}</span>
           <span class="nom">${this.escape(j.nombre)}${soyYo ? " (vos)" : ""}</span>
           ${i === 0 ? '<span class="tag host">HOST</span>' : ''}
           <span class="dot ${j.conectado ? '' : 'off'}"></span>`;
         ul.appendChild(li);
       });
+      } /* fin memo lobby (v26) */
       const activos = st.jugadores.filter(j => j.conectado).length;
       document.getElementById("contador-jug").textContent =
         `${activos}/${CFG.MAX_JUG} jugadores · mínimo ${CFG.MIN_JUG} para arrancar`;
@@ -1745,25 +3782,33 @@ const UI = {
       const sel = document.getElementById("modo-sel");
       const lbl = document.getElementById("modo-lbl");
       if (sel && lbl) {
-        const oc = document.getElementById("modo-clasico"), om = document.getElementById("modo-mecha"), oa = document.getElementById("modo-ahorcado");
-        oc.classList.toggle("sel", st.modo !== "mecha" && st.modo !== "ahorcado");
-        om.classList.toggle("sel", st.modo === "mecha");
-        oa.classList.toggle("sel", st.modo === "ahorcado");
-        if (LOCAL.soyHost) {
-          sel.style.display = "flex"; lbl.style.display = "none";
-          oc.classList.remove("bloqueado"); om.classList.remove("bloqueado"); oa.classList.remove("bloqueado");
-        } else {
+        const MODOS_UI = { clasico: "modo-clasico", mecha: "modo-mecha", ahorcado: "modo-ahorcado", reflejos: "modo-reflejos", trivia: "modo-trivia", oraculo: "modo-oraculo" };
+        const modoActual = MODOS_UI[st.modo] ? st.modo : "clasico";
+        const oraDeshab = activos < CFG.ORA_MIN_JUG;
+        Object.keys(MODOS_UI).forEach(m => {
+          const el = document.getElementById(MODOS_UI[m]);
+          if (!el) return;
+          el.classList.toggle("sel", modoActual === m);
+          el.classList.toggle("bloqueado", !LOCAL.soyHost || (m === "oraculo" && oraDeshab));
+          el.classList.toggle("deshabilitado", m === "oraculo" && oraDeshab);
+          if (m === "oraculo") {
+            const md = el.querySelector(".md");
+            if (md) md.textContent = oraDeshab ? "Necesita al menos " + CFG.ORA_MIN_JUG + " jugadores." : "Vot\u00e1, escrib\u00ed una excusa an\u00f3nima y adivin\u00e1 qui\u00e9n escribi\u00f3 cada una. M\u00ednimo 3.";
+          }
+        });
+        if (LOCAL.soyHost) { sel.style.display = "flex"; lbl.style.display = "none"; }
+        else {
           sel.style.display = "flex"; lbl.style.display = "block";
-          oc.classList.add("bloqueado"); om.classList.add("bloqueado"); oa.classList.add("bloqueado");
-          const nombreModo = st.modo === "mecha" ? "\u{1F56F}\uFE0F Mecha Compartida" : (st.modo === "ahorcado" ? "\u{1F524} Ahorcado Expr\u00e9s" : "\u{1F4A3} Cl\u00e1sico");
-          lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + nombreModo;
+          const NOMBRES = { clasico: "\u{1F4A3} Cl\u00e1sico", mecha: "\u{1F56F}\uFE0F Mecha Compartida", ahorcado: "\u{1F524} Ahorcado Expr\u00e9s", reflejos: "\u26A1 Duelo de Reflejos", trivia: "\u2753 Trivia con Bomba", oraculo: "\u{1F52E} El Or\u00e1culo Miente" };
+          lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + NOMBRES[modoActual];
         }
       }
     }
 
     if (st.fase === "jugando") {
-      document.getElementById("ronda-lbl").textContent = "Ronda " + st.ronda;
+      document.getElementById("ronda-lbl").textContent = st.modo === "oraculo" ? ("Ronda " + st.ronda + " de " + CFG.ORA_RONDAS) : ("Ronda " + st.ronda);
       const box = document.getElementById("regla-box");
+      box.style.display = st.modo === "oraculo" ? "none" : "";   /* en el oráculo la pregunta va dentro de ora-zona */
       box.classList.toggle("especial", !!st.esEspecial);
       document.getElementById("regla-label").textContent = st.esEspecial ? "Ronda especial" : "Regla de la ronda";
       {
@@ -1774,6 +3819,8 @@ const UI = {
       }
       document.getElementById("badge-especial").innerHTML = st.esEspecial ? '<span class="badge-especial">✦ ESPECIAL ✦</span>' : "";
 
+      const bz = document.querySelector(".bomba-zona");
+      if (bz) bz.style.display = st.modo === "oraculo" ? "none" : "";
       const hot = st.jugadores.find(j => j.id === st.bombaEn);
       const laTengoYo = st.bombaEn === LOCAL.miId;
       document.getElementById("bomba-emoji").classList.toggle("mia", laTengoYo);
@@ -1782,16 +3829,11 @@ const UI = {
       document.getElementById("app").classList.toggle("hot-bg", laTengoYo);
       document.getElementById("quien-tiene").innerHTML = laTengoYo
         ? '<span class="nombre-hot">¡La tenés vos! 🔥</span>'
-        : (hot ? `La tiene <span class="nombre-hot">${hot.emoji} ${this.escape(hot.nombre)}</span>` : "");
+        : (hot ? `La tiene <span class="nombre-hot">${AV(hot.emoji)} ${this.escape(hot.nombre)}</span>` : "");
 
       // contador visible (modos mecha y ahorcado)
       const tc = document.getElementById("turno-count");
-      if (tc) {
-        if (st.modo === "ahorcado" && st.turnoSeg != null && st.bombaEn) {
-          tc.textContent = "\u23F1\uFE0F " + st.turnoSeg + "s";
-          tc.className = "turno-count " + (st.turnoSeg <= 3 ? "critico" : st.turnoSeg <= 5 ? "medio" : "ok");
-        } else { tc.textContent = ""; tc.className = "turno-count"; }
-      }
+      if (tc) this.pintarTurnoCount(tc, st);
       // máscara de la palabra (solo modo ahorcado, la ven todos)
       const am = document.getElementById("aho-mask");
       if (am) {
@@ -1816,6 +3858,29 @@ const UI = {
       // pista de categoría (solo ahorcado): orientación de lo que se busca
       const ac = document.getElementById("aho-cat");
       if (ac) ac.textContent = (st.modo === "ahorcado" && st.ahoCat) ? "\u{1F9ED} Pista: " + st.ahoCat : "";
+      // info del microjuego para los que MIRAN (reflejos): saben qué desafío está resolviendo el portador
+      const ri = document.getElementById("rf-info");
+      if (ri) ri.textContent = (st.modo === "reflejos" && st.rf && st.bombaEn && st.bombaEn !== LOCAL.miId) ? "\u26A1 " + st.rf.titulo : "";
+      // trivia para los que MIRAN: pregunta + opciones de solo lectura (memo: solo se re-arma si cambió)
+      const ti = document.getElementById("trv-info");
+      if (ti) {
+        const verTi = st.modo === "trivia" && st.trv && st.bombaEn && st.bombaEn !== LOCAL.miId;
+        const tiKey = verTi ? st.trv.p + "|" + st.bombaEn : "";
+        if (this._tiKey !== tiKey) {
+          this._tiKey = tiKey;
+          ti.innerHTML = "";
+          if (verTi) {
+            const LE = ["A", "B", "C", "D"];
+            const pd = document.createElement("div"); pd.className = "trv-p"; pd.textContent = "\u2753 " + st.trv.p;
+            const ops = document.createElement("div"); ops.className = "trv-ops";
+            st.trv.ops.forEach((o, i) => {
+              const d = document.createElement("div"); d.className = "trv-op-leida"; d.textContent = LE[i] + ") " + o;
+              ops.appendChild(d);
+            });
+            ti.appendChild(pd); ti.appendChild(ops);
+          }
+        }
+      }
 
       const pl = document.getElementById("palabra-live");
       pl.innerHTML = (!laTengoYo && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
@@ -1828,7 +3893,11 @@ const UI = {
       const tm = document.getElementById("turno-mio");
       tm.style.display = laTengoYo ? "block" : "none";
       const esAho = st.modo === "ahorcado";
-      document.getElementById("app").classList.toggle("teclado", laTengoYo && !esAho);
+      const esRf = st.modo === "reflejos";
+      const esTrv = st.modo === "trivia";
+      // en reflejos solo se escribe en el microjuego "al revés"; en trivia y ahorcado hay solo botones
+      const conEscritura = !esAho && !esTrv && (!esRf || (st.rf && (st.rf.tipo === "reves" || st.rf.tipo === "anagrama" || st.rf.tipo === "copiar")));
+      document.getElementById("app").classList.toggle("teclado", laTengoYo && conEscritura);
       // v21: en TU turno de Ahorcado la pantalla se compacta para que las 4 letras entren sin scroll
       document.getElementById("app").classList.toggle("aho-turno", laTengoYo && esAho);
       // en ahorcado no hay input ni teclado: 4 botones de letra
@@ -1836,9 +3905,9 @@ const UI = {
       const tecEl = document.getElementById("teclado-propio");
       const btnPasar = document.getElementById("btn-pasar");
       const opCont = document.getElementById("aho-opciones");
-      if (inpEl) inpEl.style.display = esAho ? "none" : "block";
-      if (tecEl) tecEl.style.display = esAho ? "none" : "";
-      if (btnPasar) btnPasar.style.display = esAho ? "none" : "block";
+      if (inpEl) inpEl.style.display = conEscritura ? "block" : "none";
+      if (tecEl) tecEl.style.display = conEscritura ? "" : "none";
+      if (btnPasar) btnPasar.style.display = conEscritura ? "block" : "none";
       if (opCont) {
         opCont.style.display = esAho && laTengoYo ? "grid" : "none";
         // v21: memo — no re-armar los 4 botones si son las mismas letras (render corre 1/seg)
@@ -1858,11 +3927,41 @@ const UI = {
         }
         }
       }
+      // opciones de trivia: solo las toca quien tiene la bomba (memo: no re-armar si es la misma pregunta)
+      const tvCont = document.getElementById("trv-opciones");
+      if (tvCont) {
+        tvCont.style.display = esTrv && laTengoYo ? "flex" : "none";
+        const tvKey = (esTrv && laTengoYo && st.trv) ? st.trv.p + "|" + st.bombaEn + "|" + st.ronda : "";
+        if (this._tvKey !== tvKey) {
+          this._tvKey = tvKey;
+          tvCont.innerHTML = "";
+          if (esTrv && laTengoYo && st.trv) {
+            st.trv.ops.forEach((o, i) => {
+              const b = document.createElement("button");
+              b.type = "button";
+              b.className = "trv-op";
+              b.textContent = o;
+              b.addEventListener("pointerdown", (e) => { e.preventDefault(); UI.trvElegir(i); });
+              tvCont.appendChild(b);
+            });
+          }
+        }
+      }
+      // zona del microjuego (reflejos): solo la ve quien tiene la bomba; se re-arma solo si cambió el desafío
+      const rfCont = document.getElementById("rf-zona");
+      if (rfCont) {
+        const verRf = esRf && laTengoYo && !!st.rf;
+        rfCont.style.display = verRf ? "block" : "none";
+        const rfKey = verRf ? JSON.stringify(st.rf) + "|" + st.bombaEn + "|" + st.ronda : "";
+        if (this._rfKey !== rfKey) { this._rfKey = rfKey; this.armarMicrojuego(rfCont, verRf ? st.rf : null); }
+      }
       const aviso = tm.querySelector(".aviso");
-      if (aviso) aviso.textContent = esAho ? "\u{1F525} \u00a1La ten\u00e9s vos! Toc\u00e1 la letra que sigue" : "\u{1F525} \u00a1La ten\u00e9s vos! Escrib\u00ed una palabra";
+      if (aviso) aviso.textContent = esRf
+        ? "\u26A1 " + (st.rf ? st.rf.titulo : "\u00a1La ten\u00e9s vos!")
+        : (esTrv ? "\u2753 \u00a1La ten\u00e9s vos! Toc\u00e1 la respuesta correcta" : (esAho ? "\u{1F525} \u00a1La ten\u00e9s vos! Toc\u00e1 la letra que sigue" : "\u{1F525} \u00a1La ten\u00e9s vos! Escrib\u00ed una palabra"));
       const rm = document.getElementById("regla-mini");
       if (rm) {
-        const rmTxt = st.reglaActual ? st.reglaActual.texto : "";
+        const rmTxt = (st.modo === "reflejos" && st.rf) ? st.rf.titulo : ((esTrv && st.trv) ? st.trv.p : (st.reglaActual ? st.reglaActual.texto : ""));
         if (st.modo === "clasico" && st.bombaEn && st.reglaActual) this.pintarKaraoke(rm, rmTxt, rmTxt + "|" + st.bombaEn + "|" + st.ronda + "|" + (st.usadas ? st.usadas.length : 0));
         else this.textoPlano(rm, rmTxt);
         rm.classList.toggle("esp", !!st.esEspecial);
@@ -1871,8 +3970,9 @@ const UI = {
       if (btnP && !laTengoYo) btnP.disabled = false;
 
       const vf = document.getElementById("vidas-fila");
+      const esOraVidas = st.modo === "oraculo";
       // v21: memo — las fichas de vidas solo se re-arman si algo cambió
-      const vKey = st.jugadores.map(j => j.id + ":" + j.vidas + (j.id === st.bombaEn ? "H" : "") + (j.conectado ? "" : "X")).join("|");
+      const vKey = st.jugadores.map(j => j.id + ":" + (esOraVidas ? ((st.stats[j.id] && st.stats[j.id].puntos) || 0) : j.vidas) + (j.id === st.bombaEn ? "H" : "") + (j.conectado ? "" : "X")).join("|") + (esOraVidas ? "|O" : "");
       if (this._vidasKey !== vKey) {
       this._vidasKey = vKey;
       vf.innerHTML = "";
@@ -1880,14 +3980,22 @@ const UI = {
         const chip = document.createElement("div");
         chip.className = "vida-chip" + (j.id === st.bombaEn ? " hot" : "") + (j.vidas <= 0 ? " muerto" : "") + (!j.conectado ? " off-conn" : "");
         const conn = j.conectado ? "" : " 📴";
-        chip.innerHTML = `<span class="av-real">${j.emoji}</span> <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
+        chip.innerHTML = esOraVidas
+          ? `${AV(j.emoji)} <span class="corazones">🔮 ${(st.stats[j.id] && st.stats[j.id].puntos) || 0} pts</span>${conn}`
+          : `${AV(j.emoji)} <span class="corazones">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>${conn}`;
         vf.appendChild(chip);
       });
       }
+      // modo oráculo: su propia zona de juego (votar / adivinar / resultados)
+      this.renderOra(false);
     } else {
       document.getElementById("app").classList.remove("hot-bg");
       document.getElementById("app").classList.remove("teclado");
       document.getElementById("app").classList.remove("aho-turno");
+      const oz = document.getElementById("ora-zona");
+      if (oz) oz.style.display = "none";
+      this._oraKey = null;
+      this.restaurarTeclado();
     }
 
     /* anuncio a pantalla completa de ronda especial (para todos, con cuenta regresiva) */
@@ -1920,7 +4028,10 @@ const UI = {
     }
 
     if (st.fase === "podio") {
-      const orden = [...st.jugadores].sort((a, b) => b.vidas - a.vidas || (this.q(a.id) - this.q(b.id)));
+      const ptsDe = id => (st.stats[id] && st.stats[id].puntos) || 0;
+      const orden = st.modo === "oraculo"
+        ? [...st.jugadores].sort((a, b) => ptsDe(b.id) - ptsDe(a.id) || (this.q(a.id) - this.q(b.id)))
+        : [...st.jugadores].sort((a, b) => b.vidas - a.vidas || (this.q(a.id) - this.q(b.id)));
       const lista = document.getElementById("podio-lista");
       lista.innerHTML = "";
       const medallas = ["🥇","🥈","🥉"];
@@ -1930,9 +4041,9 @@ const UI = {
         li.style.animationDelay = (i * 0.08) + "s";
         li.innerHTML = `
           <span class="pos">${medallas[i] || (i + 1)}</span>
-          <span class="av av-real">${j.emoji}</span>
+          <span class="av">${AV(j.emoji)}</span>
           <span class="nom">${this.escape(j.nombre)}</span>
-          <span class="det">${"❤️".repeat(Math.max(0, j.vidas)) || "💀"}</span>`;
+          <span class="det">${st.modo === "oraculo" ? ("🔮 " + ((st.stats[j.id] && st.stats[j.id].puntos) || 0) + " pts") : (("❤️".repeat(Math.max(0, j.vidas))) || "💀")}</span>`;
         lista.appendChild(li);
       });
       this.renderPremios(st, orden);
@@ -1943,11 +4054,35 @@ const UI = {
 
   q(id) { return (GAME.state.stats[id] && GAME.state.stats[id].quemado) || 0; },
 
+  /* premios propios del modo oráculo (podio por puntos) */
+  renderPremiosOra(st, orden, cont, ids) {
+    const nombre = id => { const j = st.jugadores.find(x => x.id === id); return j ? `${AV(j.emoji)} ${this.escape(j.nombre)}` : "?"; };
+    const premios = [];
+    let certero = null, maxA = 0;
+    ids.forEach(id => { const v = (st.stats[id] && st.stats[id].oraAdivino) || 0; if (v > maxA) { maxA = v; certero = id; } });
+    if (certero && maxA > 0) premios.push({ ic: "\u{1F575}\uFE0F", t: "El m\u00e1s certero", n: nombre(certero), s: `adivin\u00f3 ${maxA} puntos de autores` });
+    let engan = null, maxE = 0;
+    ids.forEach(id => { const v = (st.stats[id] && st.stats[id].oraEngano) || 0; if (v > maxE) { maxE = v; engan = id; } });
+    if (engan && maxE > 0) premios.push({ ic: "\u{1F3AD}", t: "El m\u00e1s enga\u00f1oso", n: nombre(engan), s: `sus excusas confundieron ${maxE} veces` });
+    let eleg = null, maxV = 0;
+    ids.forEach(id => { const v = (st.stats[id] && st.stats[id].oraVecesElegido) || 0; if (v > maxV) { maxV = v; eleg = id; } });
+    if (eleg && maxV > 0) premios.push({ ic: "\u2B50", t: "El m\u00e1s se\u00f1alado", n: nombre(eleg), s: `fue el m\u00e1s votado ${maxV} ${maxV === 1 ? "vez" : "veces"}` });
+    if (orden[0]) premios.push({ ic: "\u{1F451}", t: "El sabio del grupo", n: nombre(orden[0].id), s: `${(st.stats[orden[0].id] && st.stats[orden[0].id].puntos) || 0} puntos` });
+    premios.forEach((p, i) => {
+      const el = document.createElement("div");
+      el.className = "premio-chip";
+      el.style.animationDelay = (0.3 + i * 0.1) + "s";
+      el.innerHTML = `<span class="ic">${p.ic}</span><div class="txt-p"><b>${p.t}</b><span> ${p.n}</span><small>${p.s}</small></div>`;
+      cont.appendChild(el);
+    });
+  },
+
   renderPremios(st, orden) {
     const cont = document.getElementById("premios");
     cont.innerHTML = "";
     const ids = st.jugadores.map(j => j.id);
-    const nombre = id => { const j = st.jugadores.find(x => x.id === id); return j ? `${j.emoji} ${this.escape(j.nombre)}` : "?"; };
+    if (st.modo === "oraculo") { this.renderPremiosOra(st, orden, cont, ids); return; }
+    const nombre = id => { const j = st.jugadores.find(x => x.id === id); return j ? `${AV(j.emoji)} ${this.escape(j.nombre)}` : "?"; };
     const premios = [];
     let mq = null, maxQ = 0;
     ids.forEach(id => { const q = this.q(id); if (q > maxQ) { maxQ = q; mq = id; } });
@@ -1987,13 +4122,29 @@ const UI = {
       cont.appendChild(fila);
     });
   },
+  /* el teclado propio escribe en el input activo: el de la bomba o el de la excusa del oráculo */
+  kbInput() {
+    const oi = document.getElementById("ora-texto");
+    if (oi && oi.offsetParent !== null) return oi;
+    return document.getElementById("in-palabra");
+  },
+  /* devuelve el teclado a su casa (dentro de turno-mio, antes de las opciones del ahorcado) */
+  restaurarTeclado() {
+    const tec = document.getElementById("teclado-propio");
+    const tm = document.getElementById("turno-mio");
+    const ancla = document.getElementById("aho-opciones");
+    if (tec && tm && ancla && tec.parentNode !== tm) tm.insertBefore(tec, ancla);
+    if (tec) tec.style.display = "";
+  },
   tecla(ch) {
-    const inp = document.getElementById("in-palabra");
+    const inp = this.kbInput();
     if (!inp) return;
+    const max = inp.id === "ora-texto" ? CFG.ORA_MAX_CHARS : 40;
     if (ch === "⌫") inp.value = inp.value.slice(0, -1);
-    else if (inp.value.length < 40) inp.value += ch;
+    else if (inp.value.length < max) inp.value += ch;
     this.vibrar(10);
-    this.notificarTipeo();
+    if (inp.id === "ora-texto") this.oraActualizarBoton();
+    else this.notificarTipeo();
   },
   _tipeoTimer: null, _tipeoUltimo: 0,
   notificarTipeo() {
@@ -2018,18 +4169,25 @@ const UI = {
     const st = GAME.state;
     const pl = document.getElementById("palabra-live");
     if (!pl) return;
-    pl.innerHTML = (st.bombaEn !== LOCAL.miId && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
+    const html = (st.bombaEn !== LOCAL.miId && st.palabraActual) ? this.escape(st.palabraActual) + '<span class="cursor">|</span>' : "";
+    if (this._plKey !== html) { this._plKey = html; pl.innerHTML = html; }  /* v26: no reescribir si no cambió */
+  },
+  /* contador visible de turno/etapa: lo usan ahorcado, reflejos, trivia y el oráculo */
+  pintarTurnoCount(tc, st) {
+    if (!tc) return;
+    let seg = null;
+    if ((st.modo === "ahorcado" || st.modo === "reflejos" || st.modo === "trivia") && st.turnoSeg != null && st.bombaEn) seg = st.turnoSeg;
+    else if (st.modo === "oraculo" && st.ora && st.ora.etapaSeg != null) seg = st.ora.etapaSeg;
+    if (seg != null) {
+      tc.textContent = "\u23F1\uFE0F " + seg + "s";
+      tc.className = "turno-count " + (seg <= 3 ? "critico" : seg <= 5 ? "medio" : "ok");
+    } else { tc.textContent = ""; tc.className = "turno-count"; }
   },
   renderTick() {
     const st = GAME.state;
     if (st.fase !== "jugando") return;
     const tc = document.getElementById("turno-count");
-    if (tc) {
-      if (st.modo === "ahorcado" && st.turnoSeg != null && st.bombaEn) {
-        tc.textContent = "\u23F1\uFE0F " + st.turnoSeg + "s";
-        tc.className = "turno-count " + (st.turnoSeg <= 3 ? "critico" : st.turnoSeg <= 5 ? "medio" : "ok");
-      } else { tc.textContent = ""; tc.className = "turno-count"; }
-    }
+    if (tc) this.pintarTurnoCount(tc, st);
     const cnt = document.getElementById("anuncio-count");
     if (cnt) {
       if (st.anuncioSeg != null) cnt.textContent = st.anuncioSeg;
@@ -2047,6 +4205,7 @@ const UI = {
     if (btnP) { btnP.disabled = true; setTimeout(() => { if (btnP) btnP.disabled = false; }, 500); }
     this.ultimaEnviada = texto;
     inp.value = "";
+    if (GAME.state.modo === "reflejos") { this.elegirRf(texto); return; }
     const nonce = Date.now() + "-" + Math.random().toString(36).slice(2, 7);
     if (LOCAL.soyHost) GAME.intentarPasar(LOCAL.miId, texto, nonce);
     else NET.enviarInput({ kind: "pasar", texto, nonce });
@@ -2079,7 +4238,7 @@ const UI = {
   mostrarBono(d) {
     const el = document.getElementById("bono-toast");
     if (!el) return;
-    el.textContent = "\u{1F550} " + (d.emoji || "") + " " + this.escape(d.nombre || "") + " agreg\u00f3 " + d.seg + "s al reloj";
+    el.innerHTML = "\u{1F550} " + AV(d.emoji) + " " + this.escape(d.nombre || "") + " agreg\u00f3 " + d.seg + "s al reloj";
     el.classList.add("on");
     AUDIO.bono();
     if (this.bonoTimeout) clearTimeout(this.bonoTimeout);
@@ -2102,8 +4261,8 @@ const UI = {
     this.vibrar([120, 60, 200]);
     const ov = document.getElementById("explosion");
     const dmg = data.danio > 1 ? ` (-${data.danio} vidas!)` : "";
-    document.getElementById("explosion-txt").textContent =
-      (data.perdedorId === LOCAL.miId) ? `💥 ¡Explotó en tus manos!${dmg}` : `💥 Explotó con ${data.emoji} ${data.nombre}${dmg}`;
+    document.getElementById("explosion-txt").innerHTML =
+      (data.perdedorId === LOCAL.miId) ? `💥 ¡Explotó en tus manos!${dmg}` : `💥 Explotó con ${AV(data.emoji)} ${this.escape(data.nombre)}${dmg}`;
     ov.classList.add("on");
     const app = document.getElementById("app");
     app.classList.add("shake");
@@ -2183,8 +4342,15 @@ const UI = {
     LOCAL.soyHost = false; LOCAL.miId = null; LOCAL.codigo = null; LOCAL.enSala = false;
     GAME.limpiarTimer(); GAME.ultimoNonce = {}; GAME.enPausa = false;
     GAME.orden = []; GAME.ordenIdx = 0;
-    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null, revesPalabra: null, revesSeg: null, ahoMask: null, ahoOpciones: null, ahoCompleta: null, ahoCat: null };
+    GAME.state = { fase: "lobby", jugadores: [], bombaEn: null, reglaActual: null, esEspecial: false, palabraActual: "", ultimaPalabra: "", usadas: [], ronda: 1, stats: {}, modo: "clasico", turnoSeg: null, mechaFrac: null, anuncioSeg: null, revesPalabra: null, revesSeg: null, ahoMask: null, ahoOpciones: null, ahoCompleta: null, ahoCat: null, rf: null };
     GAME.ahoPartida = new Set(); GAME.ahoPalabra = null; GAME.ahoReveladas = new Set();
+    GAME.rfSol = null; GAME.rfUsados = []; UI._rfKey = null; UI._rfLimpiarTimers();
+    GAME.state.trv = null; GAME.trvSol = null; GAME.trvPartida = new Set();
+    GAME.state.ora = null; GAME.oraVotos = {}; GAME.oraGuess = {}; GAME.oraAutores = {};
+    GAME.oraPartida = new Set(); GAME.oraFalsasPartida = new Set();
+    UI._oraKey = null; UI.oraSelVoto = null; UI.oraSelAutor = null; UI.oraMapa = {}; UI.oraMiTexto = ""; UI.oraDraft = "";
+    UI._tvKey = null; UI._tiKey = null; UI._lobbyKey = null; UI._plKey = null;
+    UI.restaurarTeclado();
     const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
     document.getElementById("app").classList.remove("hot-bg");
     this.ocultarBanner();
@@ -2216,6 +4382,9 @@ const AUDIO = {
       g.gain.setValueAtTime(vol, this.ctx.currentTime);
       g.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + dur);
       o.connect(g); g.connect(this.ctx.destination);
+      /* v26: desconectar al terminar — sin esto, en WebViews de gama baja los nodos
+         quedan colgados del grafo de audio y se acumulan de a miles en partidas largas */
+      o.onended = () => { try { o.disconnect(); g.disconnect(); } catch (e) {} };
       o.start(); o.stop(this.ctx.currentTime + dur);
     } catch (e) {}
   },
@@ -2230,12 +4399,19 @@ const AUDIO = {
       this.tono(90, 0.5, "sawtooth", 0.35);
       this.tono(60, 0.6, "square", 0.3);
       const dur = 0.5;
-      const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
-      const data = buffer.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
-      const src = this.ctx.createBufferSource(); src.buffer = buffer;
+      /* v26: el buffer de ruido se genera UNA sola vez y se reutiliza (antes se creaba
+         un AudioBuffer nuevo por explosión → basura acumulada en memoria) */
+      if (!this._noise || this._noiseRate !== this.ctx.sampleRate) {
+        const buffer = this.ctx.createBuffer(1, this.ctx.sampleRate * dur, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+        this._noise = buffer; this._noiseRate = this.ctx.sampleRate;
+      }
+      const src = this.ctx.createBufferSource(); src.buffer = this._noise;
       const g = this.ctx.createGain(); g.gain.value = 0.35;
-      src.connect(g); g.connect(this.ctx.destination); src.start();
+      src.connect(g); g.connect(this.ctx.destination);
+      src.onended = () => { try { src.disconnect(); g.disconnect(); } catch (e) {} };
+      src.start();
     } catch (e) {}
   }
 };
