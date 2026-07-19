@@ -1,6 +1,6 @@
-# HANDOFF — Cadena Explosiva v28
+# HANDOFF — Cadena Explosiva v30.1
 
-Juego P2P de fiesta para celulares (PeerJS, un solo `index.html`, sin backend propio): una bomba pasa de mano en mano y explota en la cara del que falla. **7 modos**, host autoritario, espectadores en vivo, podio + revancha.
+Juego P2P de fiesta para celulares (PeerJS, un solo `index.html`, sin backend propio): una bomba pasa de mano en mano y explota en la cara del que falla. **8 modos**, host autoritario, espectadores en vivo, podio + revancha.
 
 ## Modos actuales
 
@@ -11,8 +11,9 @@ Juego P2P de fiesta para celulares (PeerJS, un solo `index.html`, sin backend pr
 | 3 | 🔤 Ahorcado Exprés | `ahorcado` | 2 | Adiviná la próxima letra entre 4 opciones |
 | 4 | ⚡ Duelo de Reflejos | `reflejos` | 2 | 27 microjuegos relámpago |
 | 5 | ❓ Trivia con Bomba | `trivia` | 2 | 4 opciones, dificultad creciente (pools 180/120/100) |
-| 6 | 🧠 A Ver Si Te Acordás | `memoria` | 2 | **NUEVO v27** — Simon con bomba + 2 giros únicos |
-| 7 | 🔮 El Oráculo Miente | `oraculo` | 3 (guardia lobby+host) | Social: voto secreto, excusas, desenmascarar |
+| 6 | 🧠 A Ver Si Te Acordás | `memoria` | 2 | Simon con bomba + fantasma y paneles traicioneros |
+| 7 | 🎨 Cadena de Colores | `memoria2` | 2 | **NUEVO v30** — memoria pura sin trampas, 3-2-1 inicial, tiempos generosos |
+| 8 | 🔮 El Oráculo Miente | `oraculo` | 3 (guardia lobby+host) | Social: voto secreto, excusas, desenmascarar |
 
 ## El modo nuevo: `memoria` (v27)
 
@@ -112,3 +113,47 @@ Clásico, Mecha Compartida, Ahorcado, Reflejos, Trivia, Oráculo, protocolo Peer
 - **Modo nuevo 🎨 CADENA DE COLORES (`memoria2`)**: mismo motor, sin fantasma ni paneles traicioneros; cuenta regresiva 3-2-1 solo al arrancar la partida (CFG.MEM_CUENTA_PASO_MS); tiempo generoso: 6s base + 3,5s por color (CFG.MEM2_*). Helper `ES_MEM()` unifica el routing.
 - **Pantalla**: `mem-turno` compacto aplicado a TODOS (también espectadores) en ambos modos de memoria; nuevo `rf-turno` compacto para Reflejos; media query global max-height:700px que achica título/regla/pads en celus bajitos.
 - **QA**: harness headless nuevo (qa dirigido 79 checks x12 + fuzz ~300k checks/corrida x10) en 0 fallas; sintaxis OK; sin timers nuevos sin limpiar (todo pasa por `limpiarTimer`).
+
+## v30.1 (2026-07-18) — CIRUGÍA sobre la entrega v30
+
+**Bug único, crítico, corregido (1 edición de 3 líneas en `renderMem`):** el cartel del aviso
+(👻 fantasma) y el de la cuenta 3-2-1 se insertaban con `zona.insertBefore(av, g)` cuando la
+grilla `g` todavía NO era hija de la zona → `NotFoundError` que cortaba `UI.render()` a mitad
+de camino y, en el host, cortaba la cadena `arrancarMemoria()` ANTES de armar el timer que
+hace avanzar la etapa. Síntomas exactos reportados:
+- 🎨 CADENA DE COLORES no arrancaba nunca (revienta en el primer render de la cuenta 3-2-1;
+  el host queda en fase "jugando" pero nadie cambia de pantalla → "no se puede entrar").
+- 🧠 A VER SI TE ACORDÁS se clavaba al primer acierto (cadena 4 → aviso del fantasma → mismo
+  error) y el juego quedaba congelado para todos: sin turno visible, sin poder tocar.
+- En los invitados el mismo throw dentro de `pintar()` salteaba `sincronizarPantalla`, por eso
+  también se veían pantallas a medio pintar en otros modos mientras hubiera memoria activa.
+
+**Fix:** `zona.appendChild(g)` se ejecuta ANTES de insertar los carteles (el `insertBefore`
+ahora siempre tiene una referencia válida). Sin ningún otro cambio de lógica. `index.html`
+idéntico a `www/index.html`; `node --check` OK.
+
+**QA v30.1 (harness headless nuevo: JSDOM real por "celu", reloj virtual compartido, Peer
+falso en memoria, bots que juegan por la UI como un humano):**
+- Smoke de los 7 modos con bomba (3 jugadores, 8 turnos c/u): "quién la tiene" visible en
+  todos los celus, `turno-mio` del portador, inputs/botones/paneles habilitados, 4 opciones
+  de trivia/ahorcado, 6 paneles de memoria. Antes del fix fallaba exactamente en memoria
+  (aviso) y memoria2 (cuenta); después: 0 fallas. Corrido ×12.
+- Partidas COMPLETAS hasta el podio en los 8 modos (2 a 8 jugadores), con errores, timeouts
+  y verificación de timers muertos en el podio (`bombaTimer…mechaInterval` en null). Oráculo:
+  flujo entero votar→adivinar→resultados→podio con 3 jugadores. Corrido ×6.
+- Revancha en memoria2 (re-arranca con cuenta 3-2-1 y llega a "toca") y "otro modo"
+  (lobby limpio, sin `mem` colgado ni clase `mem-turno` pegada en trivia).
+- Espectadores: 6 paneles deshabilitados, `mem-info` con texto, progreso en vivo vía
+  `memtoque`; cartel 3-2-1 y cartel del fantasma visibles en TODOS los celus.
+- Desconexión del portador en cada etapa (`cuenta`, `ver`, `toca`): la partida sigue sola
+  hasta el siguiente portador.
+- Deep memoria: cadena creciendo hasta 8 con fantasma desde len 4 y traicioneros desde
+  len 6; en CADENA DE COLORES verificado que NUNCA hay fantasma, ni mezcla, ni orden ≠
+  identidad; aviso → ver → toca siempre avanza solo.
+- Fuzz: 47 partidas caóticas (modos y 2-8 jugadores al azar, entradas inválidas, dobles
+  toques, inputs de no-portadores, timeouts, desconexiones a mitad de partida) — todas
+  llegaron al podio; ~7.500 checks en 0 fallas.
+- Total: >12 corridas limpias consecutivas de la suite (~830 checks c/u) + 3 tandas de fuzz.
+  Única falla intermitente investigada resultó ser una carrera del propio harness (chequear
+  el turno justo durante la pausa post-explosión, que legítimamente deja `bombaEn=null`);
+  se corrigió el test, no el juego.
