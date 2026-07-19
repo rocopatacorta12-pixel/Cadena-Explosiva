@@ -1,4 +1,4 @@
-<!-- Cadena Explosiva v27 — 7 modos: los 6 de v26.1 (QA en 0 fallas) + 🧠 A VER SI TE ACORDÁS (memoria estilo Simon con COLOR SEÑUELO —un fantasma que brilla y NO se toca— y PANELES TRAICIONEROS —se mueven de lugar tras mostrarse la secuencia—; host genera/valida con kind "mem" + nonce, todos ven la secuencia y los toques en vivo; secuencia arranca en 3 y crece +1 por acierto, tiempo = 5s + 1,5s por color; 3 vidas y podio de siempre). v26.1 — 6 modos QA en 0 fallas: CLÁSICO, MECHA COMPARTIDA, AHORCADO EXPRÉS, DUELO DE REFLEJOS (27 microjuegos), TRIVIA CON BOMBA (pools 180/120/100 con dificultad creciente y rotación persistente; host genera y valida, espectadores ven la pregunta en #trv-info) y EL ORÁCULO MIENTE (voto secreto + justificación anónima + adivinar autores con frases falsas; pools 200 preguntas + 60 falsas; podio por puntos; mínimo 3 jugadores con guardia en lobby Y en el host). Auditoría v24→v25 sin regresiones + cirugía: pregunta errónea de TRV_MEDIA corregida (La voz de los 80 era de Los Prisioneros), redacción de arterias, "El ananá" rioplatense y guardia host-side del Oráculo con <3 conectados. QA headless: unitarios de generadores TRV/ORA, validación del host (nonce, no-portador, votos/mapas inválidos, puntaje determinista), ~2M de checks en 9 corridas limpias de partidas simuladas de 2-12 jugadores con fallos, timeouts y desconexiones (incluido el portador) en los 6 modos, siempre llegando al podio. Base v24 — FASE B: Duelo de Reflejos 27 microjuegos. Base v21 — Ahorcado Exprés compacto. Base v19 — Fin de partida para todos + Mecha Compartida. -->
+<!-- Cadena Explosiva v30 — 8 modos: los 7 de v29 + 🎨 CADENA DE COLORES (memoria pura sin fantasma ni paneles traicioneros: 3-2-1 inicial, tiempos generosos 6s + 3,5s/color). v30 también: en A VER SI TE ACORDÁS el aviso del fantasma aparece ANTES de mostrar la secuencia; el último toque de la secuencia se ve en todos los celus (520ms) antes de pasar la bomba; paleta de paneles con más contraste (amarillo puro vs naranja profundo); compactado rf-turno para Reflejos y ajuste global de pantallas bajitas (max-height 700px); mem-turno aplicado también a espectadores. QA headless propio: 79 checks dirigidos x12 + fuzz ~3M checks (40 partidas x10 corridas, 2-12 jugadores, fantasma tocado, timeouts, toques malos, desconexiones) en 0 fallas. Base v29 — 7 modos: los 6 de v26.1 (QA en 0 fallas) + 🧠 A VER SI TE ACORDÁS (memoria estilo Simon con COLOR SEÑUELO —un fantasma que brilla y NO se toca— y PANELES TRAICIONEROS —se mueven de lugar tras mostrarse la secuencia—; host genera/valida con kind "mem" + nonce, todos ven la secuencia y los toques en vivo; secuencia arranca en 3 y crece +1 por acierto, tiempo = 5s + 1,5s por color; 3 vidas y podio de siempre). v26.1 — 6 modos QA en 0 fallas: CLÁSICO, MECHA COMPARTIDA, AHORCADO EXPRÉS, DUELO DE REFLEJOS (27 microjuegos), TRIVIA CON BOMBA (pools 180/120/100 con dificultad creciente y rotación persistente; host genera y valida, espectadores ven la pregunta en #trv-info) y EL ORÁCULO MIENTE (voto secreto + justificación anónima + adivinar autores con frases falsas; pools 200 preguntas + 60 falsas; podio por puntos; mínimo 3 jugadores con guardia en lobby Y en el host). Auditoría v24→v25 sin regresiones + cirugía: pregunta errónea de TRV_MEDIA corregida (La voz de los 80 era de Los Prisioneros), redacción de arterias, "El ananá" rioplatense y guardia host-side del Oráculo con <3 conectados. QA headless: unitarios de generadores TRV/ORA, validación del host (nonce, no-portador, votos/mapas inválidos, puntaje determinista), ~2M de checks en 9 corridas limpias de partidas simuladas de 2-12 jugadores con fallos, timeouts y desconexiones (incluido el portador) en los 6 modos, siempre llegando al podio. Base v24 — FASE B: Duelo de Reflejos 27 microjuegos. Base v21 — Ahorcado Exprés compacto. Base v19 — Fin de partida para todos + Mecha Compartida. -->
 <!DOCTYPE html>
 <html lang="es-AR">
 <head>
@@ -442,15 +442,26 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
 .mem-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 .mem-pad {
   min-height: clamp(70px, 12vh, 104px); border-radius: 16px; border: 3px solid rgba(255,255,255,.14);
-  opacity: .36; transition: opacity .12s, transform .12s, box-shadow .12s;
+  opacity: .5; filter: saturate(1.25); transition: opacity .12s, transform .12s, box-shadow .12s;
   cursor: pointer; touch-action: manipulation; padding: 0;
 }
 .mem-pad:disabled { cursor: default; }
-.mem-pad.on { opacity: 1; transform: scale(1.06); box-shadow: 0 0 18px rgba(255,255,255,.35); }
+.mem-pad.on { opacity: 1; filter: saturate(1.4) brightness(1.12); transform: scale(1.06); box-shadow: 0 0 22px rgba(255,255,255,.5); }
 .mem-pad.bien { opacity: 1; box-shadow: 0 0 0 3px var(--ok), 0 0 18px rgba(38,208,124,.55); }
 .mem-pad.mal { opacity: 1; box-shadow: 0 0 0 3px var(--danger), 0 0 18px rgba(255,59,92,.6); animation: negar .4s; }
 .mem-pad.movida { animation: memHop .55s cubic-bezier(.22,1,.36,1); }
 @keyframes memHop { 0% { transform: scale(.82) rotate(-5deg); } 55% { transform: scale(1.09) rotate(3deg); } 100% { transform: none; } }
+/* v30: cartel grande del fantasma ANTES de la secuencia + cuenta 3-2-1 de CADENA DE COLORES */
+.mem-aviso-big {
+  text-align: center; font-size: 1.35rem; font-weight: 900; line-height: 1.3; color: #fff;
+  background: linear-gradient(135deg, rgba(255,59,92,.22), var(--card)); border: 2px solid var(--danger);
+  border-radius: 15px; padding: 12px 10px; margin-bottom: 10px; animation: memAviso .5s ease-out;
+}
+@keyframes memAviso { 0% { transform: scale(.7); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.mem-cuenta-big {
+  text-align: center; font-size: 3.4rem; font-weight: 900; color: var(--accent2);
+  margin: 4px 0 10px; animation: memAviso .35s ease-out; text-shadow: 0 0 22px rgba(255,179,0,.55);
+}
 /* v27: modo compacto en TU turno de Memoria — los 6 paneles SIEMPRE entran en pantalla sin deslizar (mismo patrón que trv-turno) */
 #app.mem-turno { padding-top: 6px; }
 #app.mem-turno .ronda-lbl { display: none; }
@@ -475,6 +486,33 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
   #app.mem-turno .mem-grid { gap: 7px; }
 }
 
+/* v30: modo compacto en TU turno de Reflejos — el microjuego entra sin deslizar */
+#app.rf-turno { padding-top: 6px; }
+#app.rf-turno .ronda-lbl { display: none; }
+#app.rf-turno .regla-box { display: none; }
+#app.rf-turno .quien-tiene { display: none; }
+#app.rf-turno .usadas { display: none; }
+#app.rf-turno .vidas-fila { display: none; }
+#app.rf-turno .bomba-zona { flex: 0 0 auto; justify-content: flex-start; gap: 4px; }
+#app.rf-turno .bomba-wrap { width: 52px; height: 52px; }
+#app.rf-turno .bomba-grande { font-size: 2rem; }
+#app.rf-turno .mecha { height: 12px; top: 0; }
+#app.rf-turno .turno-count { font-size: 1.6rem; min-height: 30px; }
+#app.rf-turno .turno-mio { margin-top: 6px; padding: 10px 12px; }
+#app.rf-turno .turno-mio .aviso { font-size: .95rem; margin-bottom: 4px; }
+#app.rf-turno .regla-mini { font-size: .9rem; padding: 7px 9px; margin-bottom: 6px; }
+@media (max-height: 620px) {
+  #app.rf-turno .bomba-wrap { display: none; }
+  #app.rf-turno .turno-count { font-size: 1.35rem; min-height: 24px; }
+}
+/* v30: pantallas bajitas — todo se achica un toque para que ningún modo obligue a deslizar */
+@media (max-height: 700px) {
+  .titulo { font-size: 1.9rem; margin: 12px 0 4px; }
+  #app { padding-top: 10px; }
+  .regla-box { padding: 9px 11px; font-size: .95rem; }
+  .ora-preg { padding: 10px 11px; font-size: 1rem; }
+  .mem-pad { min-height: clamp(52px, 9.5vh, 84px); }
+}
 /* ---- MODO EL ORÁCULO MIENTE ---- */
 .ora-zona { margin-top: 8px; display: flex; flex-direction: column; gap: 8px; }
 .ora-preg { background: linear-gradient(135deg, rgba(176,107,255,.20), var(--card)); border: 2px solid var(--especial); border-radius: 15px; padding: 13px 14px; text-align: center; font-size: 1.12rem; font-weight: 800; color: #fff; line-height: 1.35; }
@@ -575,6 +613,10 @@ body.kb-ios .tecla:active { background: #9a9a9e; color: #fff; }
       <div class="modo-op" id="modo-memoria" onclick="UI.setModo('memoria')">
         <div class="mi">🧠</div><div class="mt">A VER SI TE ACORDÁS</div>
         <div class="md">Repetí la cadena de colores que crece. Ojo: hay un fantasma que NO se toca y paneles que se mueven.</div>
+      </div>
+      <div class="modo-op" id="modo-memoria2" onclick="UI.setModo('memoria2')">
+        <div class="mi">🎨</div><div class="mt">CADENA DE COLORES</div>
+        <div class="md">Memoria pura, sin trampas ni fantasmas: 3-2-1 y a repetir la cadena, con más tiempo para pensar.</div>
       </div>
       <div class="modo-op" id="modo-oraculo" onclick="UI.setModo('oraculo')">
         <div class="mi">🔮</div><div class="mt">EL ORÁCULO MIENTE</div>
@@ -734,6 +776,11 @@ const CFG = {
   MEM_MEZCLA_MS: 1050,                       /* cuánto dura la mezcla visible de los paneles traicioneros */
   MEM_SEG_BASE: 5,                           /* segundos base para repetir */
   MEM_SEG_PASO: 1.5,                         /* + segundos por cada color de la secuencia */
+  MEM_AVISO_MS: 2600,                        /* v30: aviso del fantasma ANTES de mostrar la secuencia */
+  MEM_FIN_MS: 520,                           /* v30: se ve el último toque antes de pasar la bomba */
+  MEM2_SEG_BASE: 6,                          /* v30: CADENA DE COLORES (sin fantasma): base más generosa */
+  MEM2_SEG_PASO: 3.5,                        /* v30: +3,5s por color (para los que se cuelgan un poquito) */
+  MEM_CUENTA_PASO_MS: 900,                   /* v30: ritmo del 3-2-1 inicial de CADENA DE COLORES */
   /* modo el oráculo miente */
   ORA_RONDAS: 5,                             /* rondas por partida */
   ORA_MIN_JUG: 3,                            /* con 2 jugadores el modo queda deshabilitado en el lobby */
@@ -966,14 +1013,16 @@ const RF_COLORES = [
   { n: "AMARILLO", c: "#fdd835" }, { n: "VIOLETA", c: "#8e24aa" }, { n: "NARANJA", c: "#fb8c00" },
   { n: "ROSA", c: "#ec407a" }, { n: "CELESTE", c: "#4dd0e1" }
 ];
+/* v30: los DOS modos de memoria comparten motor: "memoria" (con trampas) y "memoria2" (pura) */
+function ES_MEM(m) { return m === "memoria" || m === "memoria2"; }
 /* ========== 3e2. MODO MEMORIA: los 6 paneles de color (cada uno con su tono) ========== */
 const MEM_COLORES = [
-  { n: "ROJO",     c: "#e53935", f: 262 },
-  { n: "AZUL",     c: "#1e88e5", f: 330 },
-  { n: "VERDE",    c: "#43a047", f: 392 },
-  { n: "AMARILLO", c: "#fdd835", f: 523 },
-  { n: "VIOLETA",  c: "#8e24aa", f: 440 },
-  { n: "NARANJA",  c: "#fb8c00", f: 587 }
+  { n: "ROJO",     c: "#f5132a", f: 262 },
+  { n: "AZUL",     c: "#1656ff", f: 330 },
+  { n: "VERDE",    c: "#0ed145", f: 392 },
+  { n: "AMARILLO", c: "#fff200", f: 523 },
+  { n: "VIOLETA",  c: "#a916f2", f: 440 },
+  { n: "NARANJA",  c: "#ff6a00", f: 587 }
 ];
 
 const RF_IMPOSTORES = {
@@ -2397,6 +2446,8 @@ const GAME = {
   memInt: null,                   /* intervalo del contador del turno (memoria) */
   _memT: null,                    /* timeout: fin de mostrar la secuencia (memoria) */
   _memT2: null,                   /* timeout: fin de la mezcla traicionera (memoria) */
+  _memDone: false,                /* v30: secuencia completa, esperando el destello final */
+  memCuenta: false,               /* v30: 3-2-1 pendiente (CADENA DE COLORES, solo al arrancar) */
   memSeq: "",                     /* cadena de colores actual, ej. "0314" (solo host) */
   memObjetivo: "",                /* lo que hay que tocar = memSeq (el señuelo NO está) */
   memIdx: 0,                      /* cuántos toques correctos lleva el portador */
@@ -2482,7 +2533,7 @@ const GAME = {
   /* Arranque de ronda: si toca especial, primero el anuncio para todos con cuenta regresiva */
   prepararRonda(primeroId) {
     if (primeroId == null) { this.chequearFin(); return; }
-    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia" || this.state.modo === "memoria") { this.pasarBombaA(primeroId); return; }
+    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia" || ES_MEM(this.state.modo)) { this.pasarBombaA(primeroId); return; }
     if (this.state.modo === "clasico" && Math.random() < CFG.PROB_REVES) {
       this.state.reglaActual = this.reglaReves();
       this.anunciarEspecial(primeroId);
@@ -2541,7 +2592,7 @@ const GAME = {
   },
   /* Continuación de turno dentro de la misma ronda (pase válido, explosión o desconexión) */
   continuarTurno(sig, escalar) {
-    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia" || this.state.modo === "memoria") { this.pasarBombaA(sig); return; }
+    if (this.state.modo === "ahorcado" || this.state.modo === "reflejos" || this.state.modo === "trivia" || ES_MEM(this.state.modo)) { this.pasarBombaA(sig); return; }
     if (this.state.esEspecial && this.state.reglaActual && this.state.reglaActual.tipo === "reves") { this.mostrarPalabraReves(sig); return; }
     if (!this.state.esEspecial) this.state.reglaActual = this.reglaNormal();
     else if (escalar && this.state.reglaActual && this.state.reglaActual.tipo === "dobleEscala") this.escalarDoble(this.state.reglaActual);
@@ -2609,6 +2660,12 @@ const GAME = {
       this.state.esEspecial = false;
       this.memNuevaSeq();
     }
+    if (this.state.modo === "memoria2") {
+      this.state.reglaActual = { id: "memoria2", tipo: "memoria2", flag: "", texto: "\u{1F3A8} CADENA DE COLORES: memoria pura, sin trampas. Mir\u00e1 la cadena y repetila con calma." };
+      this.state.esEspecial = false;
+      this.memNuevaSeq();
+      this.memCuenta = true;    /* v30: 3-2-1 solo al arrancar la partida */
+    }
     if (this.state.modo === "oraculo") {
       this.state.reglaActual = { id: "oraculo", tipo: "oraculo", flag: "", texto: "\u{1F52E} EL OR\u00c1CULO MIENTE: vot\u00e1, escrib\u00ed tu excusa y desenmascar\u00e1 al resto" };
       this.state.esEspecial = false;
@@ -2627,7 +2684,7 @@ const GAME = {
     else if (this.state.modo === "ahorcado") { this.generarOpcionesAho(); this.armarTimerAho(); }
     else if (this.state.modo === "reflejos") { this.generarReflejo(); this.armarTimerRf(); }
     else if (this.state.modo === "trivia") { this.generarTrivia(); this.armarTimerTrv(); }
-    else if (this.state.modo === "memoria") { this.arrancarMemoria(); }
+    else if (ES_MEM(this.state.modo)) { this.arrancarMemoria(); }
     else this.armarTimer();
     NET.broadcastState(); UI.render();
     if (id === LOCAL.miId) { UI.turnoFresco(); AUDIO.tick(); UI.vibrar([60]); }
@@ -2952,8 +3009,9 @@ const GAME = {
   generarMemoria() {
     const N = MEM_COLORES.length;
     if (!this.memSeq) this.memNuevaSeq();
-    const conSenuelo = this.memSeq.length >= CFG.MEM_SEN_DESDE;
-    const traic = this.memSeq.length >= CFG.MEM_TRAIC_DESDE;
+    const puro = this.state.modo === "memoria2";   /* v30: CADENA DE COLORES = sin fantasma ni paneles traicioneros */
+    const conSenuelo = !puro && this.memSeq.length >= CFG.MEM_SEN_DESDE;
+    const traic = !puro && this.memSeq.length >= CFG.MEM_TRAIC_DESDE;
     let ver = this.memSeq, sen = null;
     if (conSenuelo) {
       /* contar apariciones de cada color en la cadena */
@@ -2969,17 +3027,48 @@ const GAME = {
     this.memObjetivo = this.memSeq.split("").filter(d => Number(d) !== sen).join("");
     this.memIdx = 0;
     this.state.turnoSeg = null;
-    this.state.mem = { etapa: "ver", ver: ver, sen: sen, orden: [0, 1, 2, 3, 4, 5], len: this.memObjetivo.length, progreso: 0, traic: traic };
+    this.state.mem = { etapa: "prep", ver: ver, sen: sen, orden: [0, 1, 2, 3, 4, 5], len: this.memObjetivo.length, progreso: 0, traic: traic, cnt: 0 };
   },
   /* muestra la secuencia (la ven TODOS sincronizada) → (si toca) mezcla traicionera → turno */
   arrancarMemoria() {
     this.limpiarTimer();
+    this._memDone = false;
     this.generarMemoria();
     const m = this.state.mem;
-    const durVer = CFG.MEM_PRE_MS + m.ver.length * CFG.MEM_PASO_MS + 400;
-    this._memT = setTimeout(() => {
-      this._memT = null;
+    /* v30: primero el aviso (fantasma o 3-2-1), DESPUÉS recién se muestra la secuencia */
+    const mostrarSeq = () => {
       if (this.state.fase !== "jugando" || this.state.mem !== m) return;
+      m.etapa = "ver";
+      NET.broadcastState(); UI.render();
+      const durVer = CFG.MEM_PRE_MS + m.ver.length * CFG.MEM_PASO_MS + 400;
+      this._memT = setTimeout(() => {
+        this._memT = null;
+        if (this.state.fase !== "jugando" || this.state.mem !== m) return;
+        this._memMezclaOToca(m);
+      }, durVer);
+    };
+    if (this.state.modo === "memoria2" && this.memCuenta) {
+      /* CADENA DE COLORES: cuenta regresiva 3-2-1 solo al arrancar la partida */
+      this.memCuenta = false;
+      m.etapa = "cuenta"; m.cnt = 3;
+      NET.broadcastState(); UI.render();
+      const paso = () => {
+        this._memT = null;
+        if (this.state.fase !== "jugando" || this.state.mem !== m) return;
+        m.cnt--;
+        if (m.cnt <= 0) { mostrarSeq(); return; }
+        NET.broadcastState(); UI.render();
+        this._memT = setTimeout(paso, CFG.MEM_CUENTA_PASO_MS);
+      };
+      this._memT = setTimeout(paso, CFG.MEM_CUENTA_PASO_MS);
+    } else if (m.sen != null) {
+      /* v30: el fantasma se ANUNCIA antes de mostrar la secuencia (no al mismo tiempo) */
+      m.etapa = "aviso";
+      NET.broadcastState(); UI.render();
+      this._memT = setTimeout(() => { this._memT = null; mostrarSeq(); }, CFG.MEM_AVISO_MS);
+    } else mostrarSeq();
+  },
+  _memMezclaOToca(m) {
       if (m.traic) {
         /* PANELES TRAICIONEROS: orden nuevo garantizado distinto; la animación la ven todos */
         let ord;
@@ -2991,7 +3080,6 @@ const GAME = {
         NET.broadcastState(); UI.render();
         this._memT2 = setTimeout(() => { this._memT2 = null; this.memEmpezarToca(); }, CFG.MEM_MEZCLA_MS);
       } else this.memEmpezarToca();
-    }, durVer);
   },
   memEmpezarToca() {
     if (this.state.fase !== "jugando" || !this.state.mem) return;
@@ -3004,7 +3092,9 @@ const GAME = {
   /* el tiempo CRECE con el largo de la secuencia (fórmula configurable en CFG) */
   armarTimerMem() {
     this.limpiarTimer();
-    this.state.turnoSeg = CFG.MEM_SEG_BASE + Math.ceil(this.memObjetivo.length * CFG.MEM_SEG_PASO);
+    const base = this.state.modo === "memoria2" ? CFG.MEM2_SEG_BASE : CFG.MEM_SEG_BASE;
+    const paso = this.state.modo === "memoria2" ? CFG.MEM2_SEG_PASO : CFG.MEM_SEG_PASO;
+    this.state.turnoSeg = base + Math.ceil(this.memObjetivo.length * paso);
     this.memInt = setInterval(() => {
       if (this.enPausa || this.state.fase !== "jugando") return;
       this.state.turnoSeg--;
@@ -3017,10 +3107,11 @@ const GAME = {
      Cada toque viaja por broadcast ("memtoque") para que TODOS lo vean en vivo. */
   intentarMemoria(deId, a, nonce) {
     if (this.enPausa) return;
-    if (this.state.modo !== "memoria" || this.state.fase !== "jugando") return;
+    if (!ES_MEM(this.state.modo) || this.state.fase !== "jugando") return;
     if (this.state.bombaEn !== deId) return;
     const m = this.state.mem;
     if (!m || m.etapa !== "toca") return;
+    if (this._memDone || this.memIdx >= this.memObjetivo.length) return;  /* v30: ya completó, ignorar toques extra */
     if (nonce != null && this.ultimoNonce[deId] === nonce) return;
     if (nonce != null) this.ultimoNonce[deId] = nonce;
     const idx = String(a == null ? "" : a);
@@ -3039,17 +3130,24 @@ const GAME = {
     const md = { id: deId, idx: idx, ok: true, paso: this.memIdx };
     NET.broadcastEvent("memtoque", md); UI.memFlashExterno(md); UI.renderMemInfo();
     if (this.memIdx < this.memObjetivo.length) return;
-    /* secuencia completa: pasa la bomba y la cadena CRECE +1 para el siguiente */
+    /* secuencia completa: v30 — primero se VE el último toque (verde) en todos los celus,
+       y recién después pasa la bomba al siguiente */
+    this._memDone = true;
     const s = this.statDe(deId);
     s.pasadas++;
     NET.broadcastEvent("paso", { id: deId });
     if (deId === LOCAL.miId) AUDIO.pop();
     this.limpiarTimer();
     this.state.turnoSeg = null;
-    this.memExtender();
-    const sig = this.proximoTurno(deId);
-    if (sig == null) { this.chequearFin(); return; }
-    this.pasarBombaA(sig);
+    this._memT = setTimeout(() => {
+      this._memT = null;
+      this._memDone = false;
+      if (this.state.fase !== "jugando" || !ES_MEM(this.state.modo)) return;
+      this.memExtender();
+      const sig = this.proximoTurno(deId);
+      if (sig == null) { this.chequearFin(); return; }
+      this.pasarBombaA(sig);
+    }, CFG.MEM_FIN_MS);
   },
 
   /* ===== MODO EL ORÁCULO MIENTE (solo host): modos social por rondas, sin bomba ni vidas ===== */
@@ -4004,13 +4102,13 @@ const UI = {
     const zona = document.getElementById("mem-zona");
     const info = document.getElementById("mem-info");
     if (!zona || !info) return;
-    const ver = st.modo === "memoria" && st.fase === "jugando" && !!st.mem;
+    const ver = ES_MEM(st.modo) && st.fase === "jugando" && !!st.mem;
     zona.style.display = ver ? "block" : "none";
     info.style.display = ver ? "" : "none";
     this.renderMemInfo();
     if (!ver) { this._memKey = null; this._memLimpiarTimers(); this._memPads = []; return; }
     const m = st.mem;
-    const key = [m.etapa, m.ver, m.sen, (m.orden || []).join(""), st.bombaEn, st.ronda].join("|");
+    const key = [m.etapa, m.cnt || 0, m.ver, m.sen, (m.orden || []).join(""), st.bombaEn, st.ronda].join("|");
     if (this._memKey === key) return;
     const etapaAntes = this._memKey ? this._memKey.split("|")[0] : null;
     this._memKey = key;
@@ -4028,6 +4126,20 @@ const UI = {
       b.addEventListener("pointerdown", (e) => { e.preventDefault(); if (b.disabled) return; UI.memElegir(ci); });
       g.appendChild(b); this._memPads.push(b);
     });
+    /* v30: cartel grande de aviso previo (fantasma) o cuenta regresiva (CADENA DE COLORES) */
+    if (m.etapa === "aviso" && m.sen != null) {
+      const av = document.createElement("div");
+      av.className = "mem-aviso-big";
+      av.innerHTML = "\u{1F47B} \u00a1OJO!<br>NO toques el color <b style=\"color:" + MEM_COLORES[m.sen].c + "\">" + MEM_COLORES[m.sen].n + "</b>";
+      zona.insertBefore(av, g);
+      if (etapaAntes !== "aviso") { AUDIO.tono(180, 0.25, "sawtooth", 0.2); this._memTimers.push(setTimeout(() => AUDIO.tono(150, 0.3, "sawtooth", 0.2), 300)); }
+    } else if (m.etapa === "cuenta") {
+      const cu = document.createElement("div");
+      cu.className = "mem-cuenta-big";
+      cu.textContent = m.cnt > 0 ? m.cnt : "\u00a1YA!";
+      zona.insertBefore(cu, g);
+      AUDIO.tono(m.cnt > 0 ? 520 : 780, 0.18, "square", 0.22);
+    }
     zona.appendChild(g);
     if (m.etapa === "ver") this.memAnimarVer();
     else if (m.etapa === "mezclar" && etapaAntes === "ver") this.memAnimarMezcla();
@@ -4037,11 +4149,14 @@ const UI = {
     const st = GAME.state;
     const info = document.getElementById("mem-info");
     if (!info) return;
-    if (st.modo !== "memoria" || st.fase !== "jugando" || !st.mem) { if (info.innerHTML) info.innerHTML = ""; return; }
+    if (!ES_MEM(st.modo) || st.fase !== "jugando" || !st.mem) { if (info.innerHTML) info.innerHTML = ""; return; }
     const m = st.mem;
     const senTxt = m.sen != null ? " \u00b7 \u{1F47B} Fantasma: <b>" + MEM_COLORES[m.sen].n + "</b> (\u00a1no se toca!)" : "";
     let t;
-    if (m.etapa === "ver") t = "\u{1F440} Mir\u00e1 la cadena: " + m.ver.length + " pasos" + senTxt;
+    if (m.etapa === "aviso") t = "\u{1F47B} Atenci\u00f3n: primero el aviso, despu\u00e9s la cadena\u2026";
+    else if (m.etapa === "cuenta") t = "\u{1F3A8} \u00a1Preparate! Arranca la cadena\u2026";
+    else if (m.etapa === "prep") t = "\u2728 Ah\u00ed viene la cadena\u2026";
+    else if (m.etapa === "ver") t = "\u{1F440} Mir\u00e1 la cadena: " + m.ver.length + " pasos" + senTxt;
     else if (m.etapa === "mezclar") t = "\u{1F500} \u00a1PANELES TRAICIONEROS! Se movieron de lugar\u2026";
     else {
       const soy = st.bombaEn === LOCAL.miId;
@@ -4097,7 +4212,7 @@ const UI = {
   /* toque confirmado por el host: verde si era correcto, rojo si no (lo ven TODOS) */
   memFlashExterno(d) {
     const st = GAME.state;
-    if (st.modo !== "memoria" || !st.mem) return;
+    if (!ES_MEM(st.modo) || !st.mem) return;
     const ci = Number(d.idx);
     const pos = (st.mem.orden || []).indexOf(ci);
     const b = this._memPads && this._memPads[pos];
@@ -4209,7 +4324,7 @@ const UI = {
       const sel = document.getElementById("modo-sel");
       const lbl = document.getElementById("modo-lbl");
       if (sel && lbl) {
-        const MODOS_UI = { clasico: "modo-clasico", mecha: "modo-mecha", ahorcado: "modo-ahorcado", reflejos: "modo-reflejos", trivia: "modo-trivia", memoria: "modo-memoria", oraculo: "modo-oraculo" };
+        const MODOS_UI = { clasico: "modo-clasico", mecha: "modo-mecha", ahorcado: "modo-ahorcado", reflejos: "modo-reflejos", trivia: "modo-trivia", memoria: "modo-memoria", memoria2: "modo-memoria2", oraculo: "modo-oraculo" };
         const modoActual = MODOS_UI[st.modo] ? st.modo : "clasico";
         const oraDeshab = activos < CFG.ORA_MIN_JUG;
         Object.keys(MODOS_UI).forEach(m => {
@@ -4226,7 +4341,7 @@ const UI = {
         if (LOCAL.soyHost) { sel.style.display = "flex"; lbl.style.display = "none"; }
         else {
           sel.style.display = "flex"; lbl.style.display = "block";
-          const NOMBRES = { clasico: "\u{1F4A3} Cl\u00e1sico", mecha: "\u{1F56F}\uFE0F Mecha Compartida", ahorcado: "\u{1F524} Ahorcado Expr\u00e9s", reflejos: "\u26A1 Duelo de Reflejos", trivia: "\u2753 Trivia con Bomba", memoria: "\u{1F9E0} A Ver Si Te Acord\u00e1s", oraculo: "\u{1F52E} El Or\u00e1culo Miente" };
+          const NOMBRES = { clasico: "\u{1F4A3} Cl\u00e1sico", mecha: "\u{1F56F}\uFE0F Mecha Compartida", ahorcado: "\u{1F524} Ahorcado Expr\u00e9s", reflejos: "\u26A1 Duelo de Reflejos", trivia: "\u2753 Trivia con Bomba", memoria: "\u{1F9E0} A Ver Si Te Acord\u00e1s", memoria2: "\u{1F3A8} Cadena de Colores", oraculo: "\u{1F52E} El Or\u00e1culo Miente" };
           lbl.textContent = "El anfitri\u00f3n elige el modo \u00b7 " + NOMBRES[modoActual];
         }
       }
@@ -4322,7 +4437,7 @@ const UI = {
       const esAho = st.modo === "ahorcado";
       const esRf = st.modo === "reflejos";
       const esTrv = st.modo === "trivia";
-      const esMem = st.modo === "memoria";
+      const esMem = ES_MEM(st.modo);
       // en reflejos solo se escribe en el microjuego "al revés"; en trivia, ahorcado y memoria hay solo botones/paneles
       const conEscritura = !esAho && !esTrv && !esMem && (!esRf || (st.rf && (st.rf.tipo === "reves" || st.rf.tipo === "anagrama" || st.rf.tipo === "copiar")));
       document.getElementById("app").classList.toggle("teclado", laTengoYo && conEscritura);
@@ -4331,7 +4446,9 @@ const UI = {
       // v26.1: en TU turno de Trivia la pantalla se compacta para que pregunta + opciones entren sin scroll
       document.getElementById("app").classList.toggle("trv-turno", laTengoYo && esTrv);
       // v27: en TU turno de Memoria la pantalla se compacta para que los 6 paneles entren sin scroll
-      document.getElementById("app").classList.toggle("mem-turno", laTengoYo && esMem);
+      document.getElementById("app").classList.toggle("mem-turno", esMem);
+      // v30: en TU turno de Reflejos también se compacta la pantalla
+      document.getElementById("app").classList.toggle("rf-turno", laTengoYo && esRf);
       // en ahorcado no hay input ni teclado: 4 botones de letra
       const inpEl = document.getElementById("in-palabra");
       const tecEl = document.getElementById("teclado-propio");
@@ -4435,6 +4552,7 @@ const UI = {
       document.getElementById("app").classList.remove("aho-turno");
       document.getElementById("app").classList.remove("trv-turno");
       document.getElementById("app").classList.remove("mem-turno");
+    document.getElementById("app").classList.remove("rf-turno");
       const oz = document.getElementById("ora-zona");
       if (oz) oz.style.display = "none";
       this._oraKey = null;
@@ -4620,7 +4738,7 @@ const UI = {
   pintarTurnoCount(tc, st) {
     if (!tc) return;
     let seg = null;
-    if ((st.modo === "ahorcado" || st.modo === "reflejos" || st.modo === "trivia" || st.modo === "memoria") && st.turnoSeg != null && st.bombaEn) seg = st.turnoSeg;
+    if ((st.modo === "ahorcado" || st.modo === "reflejos" || st.modo === "trivia" || ES_MEM(st.modo)) && st.turnoSeg != null && st.bombaEn) seg = st.turnoSeg;
     else if (st.modo === "oraculo" && st.ora && st.ora.etapaSeg != null) seg = st.ora.etapaSeg;
     if (seg != null) {
       tc.textContent = "\u23F1\uFE0F " + seg + "s";
@@ -4800,6 +4918,7 @@ const UI = {
     const est = document.getElementById("estado-conn"); if (est) est.innerHTML = "";
     document.getElementById("app").classList.remove("hot-bg");
     document.getElementById("app").classList.remove("mem-turno");
+    document.getElementById("app").classList.remove("rf-turno");
     this.ocultarBanner();
     this.volverMenu();
   },
